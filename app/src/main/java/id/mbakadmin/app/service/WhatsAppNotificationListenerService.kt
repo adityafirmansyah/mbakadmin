@@ -158,16 +158,18 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
     }
 
     private fun sendReply(context: Context, action: NotificationCompat.Action, replyText: String) {
+        val remoteInputs = action.remoteInputs ?: return
+        val pendingIntent = action.actionIntent ?: return
         val intent = Intent()
         val bundle = Bundle()
-        
-        action.remoteInputs?.forEach { remoteInput ->
+
+        remoteInputs.forEach { remoteInput ->
             bundle.putCharSequence(remoteInput.resultKey, replyText)
         }
-        
-        RemoteInput.addResultsToIntent(action.remoteInputs, intent, bundle)
+
+        RemoteInput.addResultsToIntent(remoteInputs, intent, bundle)
         try {
-            action.actionIntent.send(context, 0, intent)
+            pendingIntent.send(context, 0, intent)
             Log.d(TAG, "MbakAdmin sukses mengirim balasan otomatis: $replyText")
         } catch (e: PendingIntent.CanceledException) {
             Log.e(TAG, "Gagal mengirim PendingIntent: ${e.message}")
