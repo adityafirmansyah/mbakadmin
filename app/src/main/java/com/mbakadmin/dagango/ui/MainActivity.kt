@@ -1,4 +1,4 @@
-package id.mbakadmin.app.ui
+package com.mbakadmin.dagango.ui
 
 import android.content.ComponentName
 import android.content.Context
@@ -24,12 +24,12 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import id.mbakadmin.app.MbakAdminApp
-import id.mbakadmin.app.data.local.entity.ChatLogEntity
-import id.mbakadmin.app.data.local.entity.ProductEntity
-import id.mbakadmin.app.data.local.entity.StoreSettingsEntity
-import id.mbakadmin.app.service.MbakAdminGuardianService
-import id.mbakadmin.app.util.BatteryOptimizationHelper
+import com.mbakadmin.dagango.MbakAdminApp
+import com.mbakadmin.dagango.data.local.entity.ChatLogEntity
+import com.mbakadmin.dagango.data.local.entity.ProductEntity
+import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
+import com.mbakadmin.dagango.service.MbakAdminGuardianService
+import com.mbakadmin.dagango.util.BatteryOptimizationHelper
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*

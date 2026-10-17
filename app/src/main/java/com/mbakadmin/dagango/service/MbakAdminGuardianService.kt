@@ -1,4 +1,4 @@
-package id.mbakadmin.app.service
+package com.mbakadmin.dagango.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -12,7 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
-import id.mbakadmin.app.ui.MainActivity
+import com.mbakadmin.dagango.ui.MainActivity
 
 /**
  * Foreground Service persisten untuk memastikan proses MbakAdmin

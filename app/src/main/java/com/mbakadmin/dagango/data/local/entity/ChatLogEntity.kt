@@ -1,4 +1,4 @@
-package id.mbakadmin.app.data.local.entity
+package com.mbakadmin.dagango.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
