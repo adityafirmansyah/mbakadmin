@@ -90,6 +90,21 @@ MbakAdmin adalah aplikasi Android native yang bertindak sebagai "asisten toko pr
 
 ---
 
+## 📦 Download & Build APK
+
+Aplikasi di-build secara otomatis menggunakan GitHub Actions.
+1. Masuk ke tab [Actions](../../actions/workflows/build.yml).
+2. Pilih workflow run terbaru.
+3. Unduh artifact `mbakadmin-debug-apk` untuk mendapatkan file `.apk` yang siap diinstall langsung di HP Android.
+
+Untuk build manual di lokal:
+```bash
+./gradlew assembleDebug
+```
+File APK akan berada di `app/build/outputs/apk/debug/app-debug.apk`.
+
+---
+
 ## 📄 Lisensi
 
 [MIT License](LICENSE)
