@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK & Release Bundle
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-apk:
-    name: Build Debug APK
+    name: Build Signed Release & Debug
     runs-on: ubuntu-latest
 
     steps:
@@ -26,10 +26,44 @@ jobs:
       - name: Make Gradle Wrapper Executable
         run: chmod +x gradlew
 
+      - name: Decode Release Keystore
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p keystore
+          echo "$KEYSTORE_BASE64" | base64 --decode > keystore/mbakadmin-release.jks
+
+      - name: Build Signed Release APK & Bundle (AAB)
+        env:
+          KEYSTORE_FILE: keystore/mbakadmin-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease bundleRelease --stacktrace
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload Debug APK Artifact
+      - name: Clean Keystore File
+        if: always()
+        run: rm -rf keystore/*.jks
+
+      - name: Upload Signed Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mbakadmin-release-apk
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 14
+
+      - name: Upload Google Play Bundle (AAB)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mbakadmin-release-aab
+          path: app/build/outputs/bundle/release/*.aab
+          retention-days: 14
+
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: mbakadmin-debug-apk
