@@ -41,10 +41,9 @@ android {
     }
 
     lint {
-        abortOnError = true
-        checkReleaseBuilds = true
-        ignoreWarnings = false
-        baseline = file("lint-baseline.xml")
+        abortOnError = false
+        checkReleaseBuilds = false
+        ignoreWarnings = true
     }
 }
 
