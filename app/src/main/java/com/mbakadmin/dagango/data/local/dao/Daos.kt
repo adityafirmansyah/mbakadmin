@@ -1,8 +1,8 @@
-package id.mbakadmin.app.data.local.dao
+package com.mbakadmin.dagango.data.local.dao
 
 import androidx.room.*
-import id.mbakadmin.app.data.local.entity.ProductEntity
-import id.mbakadmin.app.data.local.entity.StoreSettingsEntity
+import com.mbakadmin.dagango.data.local.entity.ProductEntity
+import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -38,10 +38,10 @@ interface StoreSettingsDao {
 @Dao
 interface ChatLogDao {
     @Query("SELECT * FROM chat_logs ORDER BY timestamp DESC LIMIT 100")
-    fun getRecentChatLogs(): Flow<List<id.mbakadmin.app.data.local.entity.ChatLogEntity>>
+    fun getRecentChatLogs(): Flow<List<com.mbakadmin.dagango.data.local.entity.ChatLogEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertChatLog(chatLog: id.mbakadmin.app.data.local.entity.ChatLogEntity): Long
+    suspend fun insertChatLog(chatLog: com.mbakadmin.dagango.data.local.entity.ChatLogEntity): Long
 
     @Query("DELETE FROM chat_logs")
     suspend fun clearChatLogs()

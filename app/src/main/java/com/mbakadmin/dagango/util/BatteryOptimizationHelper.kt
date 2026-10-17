@@ -1,4 +1,4 @@
-package id.mbakadmin.app.util
+package com.mbakadmin.dagango.util
 
 import android.content.ComponentName
 import android.content.Context

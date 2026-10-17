@@ -1,15 +1,15 @@
-package id.mbakadmin.app.data.local
+package com.mbakadmin.dagango.data.local
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import id.mbakadmin.app.data.local.dao.ChatLogDao
-import id.mbakadmin.app.data.local.dao.ProductDao
-import id.mbakadmin.app.data.local.dao.StoreSettingsDao
-import id.mbakadmin.app.data.local.entity.ChatLogEntity
-import id.mbakadmin.app.data.local.entity.ProductEntity
-import id.mbakadmin.app.data.local.entity.StoreSettingsEntity
+import com.mbakadmin.dagango.data.local.dao.ChatLogDao
+import com.mbakadmin.dagango.data.local.dao.ProductDao
+import com.mbakadmin.dagango.data.local.dao.StoreSettingsDao
+import com.mbakadmin.dagango.data.local.entity.ChatLogEntity
+import com.mbakadmin.dagango.data.local.entity.ProductEntity
+import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 
 @Database(
     entities = [ProductEntity::class, StoreSettingsEntity::class, ChatLogEntity::class],

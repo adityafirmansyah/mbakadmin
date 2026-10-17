@@ -1,7 +1,7 @@
-package id.mbakadmin.app
+package com.mbakadmin.dagango
 
 import android.app.Application
-import id.mbakadmin.app.data.local.MbakAdminDatabase
+import com.mbakadmin.dagango.data.local.MbakAdminDatabase
 
 class MbakAdminApp : Application() {
     val database: MbakAdminDatabase by lazy {
@@ -11,8 +11,8 @@ class MbakAdminApp : Application() {
     override fun onCreate() {
         super.onCreate()
         // Otomatis aktifkan Guardian Foreground Service jika izin notification listener sudah diberikan
-        if (id.mbakadmin.app.ui.isNotificationServiceEnabled(this)) {
-            id.mbakadmin.app.service.MbakAdminGuardianService.startService(this)
+        if (com.mbakadmin.dagango.ui.isNotificationServiceEnabled(this)) {
+            com.mbakadmin.dagango.service.MbakAdminGuardianService.startService(this)
         }
     }
 }

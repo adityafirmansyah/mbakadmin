@@ -1,4 +1,4 @@
-package id.mbakadmin.app.service
+package com.mbakadmin.dagango.service
 
 import android.app.Notification
 import android.app.PendingIntent
@@ -10,9 +10,9 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.RemoteInput
-import id.mbakadmin.app.data.local.MbakAdminDatabase
-import id.mbakadmin.app.data.local.entity.ProductEntity
-import id.mbakadmin.app.data.local.entity.StoreSettingsEntity
+import com.mbakadmin.dagango.data.local.MbakAdminDatabase
+import com.mbakadmin.dagango.data.local.entity.ProductEntity
+import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -125,7 +125,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
             // 8. Simpan ke Riwayat Chat Log Lokal
             try {
                 db.chatLogDao().insertChatLog(
-                    id.mbakadmin.app.data.local.entity.ChatLogEntity(
+                    com.mbakadmin.dagango.data.local.entity.ChatLogEntity(
                         senderName = senderName,
                         incomingMessage = customerMessage,
                         aiReply = aiReply

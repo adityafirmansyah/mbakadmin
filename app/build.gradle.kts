@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "id.mbakadmin.app"
+    namespace = "com.mbakadmin.dagango"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "id.mbakadmin.app"
+        applicationId = "com.mbakadmin.dagango"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
