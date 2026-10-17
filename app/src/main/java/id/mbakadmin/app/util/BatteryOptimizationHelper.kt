@@ -20,22 +20,21 @@ object BatteryOptimizationHelper {
     }
 
     /**
-     * Membuka dialog izin sistem agar aplikasi diabaikan dari Battery Optimization.
+     * Membuka halaman pengaturan sistem agar aplikasi diabaikan dari Battery Optimization (tanpa perlu izin invasif).
      */
     fun requestIgnoreBatteryOptimizations(context: Context) {
         try {
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:${context.packageName}")
+            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
         } catch (e: Exception) {
-            // Fallback ke halaman daftar baterai umum jika vendor memblokir action request langsung
             try {
-                val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                val appDetailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:${context.packageName}")
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                context.startActivity(fallbackIntent)
+                context.startActivity(appDetailsIntent)
             } catch (ex: Exception) {
                 Toast.makeText(context, "Buka Pengaturan Baterai secara manual", Toast.LENGTH_SHORT).show()
             }
