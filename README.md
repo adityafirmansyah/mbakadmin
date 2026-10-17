@@ -50,11 +50,32 @@ MbakAdmin adalah aplikasi Android native yang bertindak sebagai "asisten toko pr
 [ AI Gateway / LLM Engine ]
          │ (Generate balasan persuasif gaya "Mbak Admin Olshop")
          ▼
-[ MbakAdmin Reply Engine ]
-         │ (Kirim via RemoteInput ActionIntent di background)
+[ MbakAdmin Reply Engine & Chat Logger ]
+         │ (Simpan log chat & kirim via RemoteInput ActionIntent di background)
          ▼
 [ WhatsApp Delivery ke Pembeli ]
 ```
+
+---
+
+## 📱 Fitur Aplikasi (App Screen Flow)
+
+1. **Katalog Produk:**
+   * Tambah, edit, dan hapus produk lokal secara instan.
+   * Switch toggle aktif/nonaktif produk (misal: stok sementara habis).
+   * Dukungan varian ukuran/warna dan deskripsi ringkas.
+2. **Chat Logs (Riwayat Chat):**
+   * Feed riwayat pesan masuk dan balasan otomatis AI yang terkirim di background.
+   * Tombol quick sweep/clear log untuk mengosongkan riwayat.
+3. **Pengaturan Toko & AI:**
+   * Saklar Master On/Off Auto-Reply.
+   * Pengaturan Nama Toko, Rekening/e-Wallet, dan Ekspedisi.
+   * Kustomisasi Persona / Gaya Bicara "Mbak Admin".
+   * Kustomisasi API Key & Model LLM.
+4. **Status Kesiapan Sistem (Reliability):**
+   * Deteksi izin pembaca notifikasi WhatsApp.
+   * Bypass Battery Optimization (Doze Mode).
+   * Shortcut cepat ke vendor startup manager (MIUI, ColorOS, Vivo, Transsion/Infinix).
 
 ---
 

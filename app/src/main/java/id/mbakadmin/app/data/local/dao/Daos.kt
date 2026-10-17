@@ -34,3 +34,15 @@ interface StoreSettingsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveSettings(settings: StoreSettingsEntity)
 }
+
+@Dao
+interface ChatLogDao {
+    @Query("SELECT * FROM chat_logs ORDER BY timestamp DESC LIMIT 100")
+    fun getRecentChatLogs(): Flow<List<id.mbakadmin.app.data.local.entity.ChatLogEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChatLog(chatLog: id.mbakadmin.app.data.local.entity.ChatLogEntity): Long
+
+    @Query("DELETE FROM chat_logs")
+    suspend fun clearChatLogs()
+}
