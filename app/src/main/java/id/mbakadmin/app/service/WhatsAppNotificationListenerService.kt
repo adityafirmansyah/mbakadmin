@@ -121,6 +121,19 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         if (aiReply.isNotBlank()) {
             // 7. Kirim balasan via RemoteInput (100% Native Background)
             sendReply(context, replyAction, aiReply)
+
+            // 8. Simpan ke Riwayat Chat Log Lokal
+            try {
+                db.chatLogDao().insertChatLog(
+                    id.mbakadmin.app.data.local.entity.ChatLogEntity(
+                        senderName = senderName,
+                        incomingMessage = customerMessage,
+                        aiReply = aiReply
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal menyimpan chat log: ${e.message}")
+            }
         }
     }
 

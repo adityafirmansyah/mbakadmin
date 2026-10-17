@@ -4,19 +4,22 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import id.mbakadmin.app.data.local.dao.ChatLogDao
 import id.mbakadmin.app.data.local.dao.ProductDao
 import id.mbakadmin.app.data.local.dao.StoreSettingsDao
+import id.mbakadmin.app.data.local.entity.ChatLogEntity
 import id.mbakadmin.app.data.local.entity.ProductEntity
 import id.mbakadmin.app.data.local.entity.StoreSettingsEntity
 
 @Database(
-    entities = [ProductEntity::class, StoreSettingsEntity::class],
+    entities = [ProductEntity::class, StoreSettingsEntity::class, ChatLogEntity::class],
     version = 1,
     exportSchema = false
 )
 abstract class MbakAdminDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
     abstract fun storeSettingsDao(): StoreSettingsDao
+    abstract fun chatLogDao(): ChatLogDao
 
     companion object {
         @Volatile
