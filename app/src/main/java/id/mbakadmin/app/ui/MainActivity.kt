@@ -3,6 +3,7 @@ package id.mbakadmin.app.ui
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -11,18 +12,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import id.mbakadmin.app.MbakAdminApp
 import id.mbakadmin.app.data.local.entity.ProductEntity
-import id.mbakadmin.app.service.WhatsAppNotificationListenerService
+import id.mbakadmin.app.service.MbakAdminGuardianService
+import id.mbakadmin.app.util.BatteryOptimizationHelper
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -47,8 +50,26 @@ fun MainScreen() {
     val context = LocalContext.current
     val app = context.applicationContext as MbakAdminApp
     val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var isListenerEnabled by remember { mutableStateOf(isNotificationServiceEnabled(context)) }
+    var isBatteryOptimized by remember { mutableStateOf(!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) }
+
+    // Auto-refresh permission state saat user kembali ke aplikasi
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isListenerEnabled = isNotificationServiceEnabled(context)
+                isBatteryOptimized = !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
+                if (isListenerEnabled) {
+                    MbakAdminGuardianService.startService(context)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val products by app.database.productDao().getAllProducts().collectAsState(initial = emptyList())
     var showAddProductDialog by remember { mutableStateOf(false) }
 
@@ -74,47 +95,62 @@ fun MainScreen() {
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Card Status Izin Notifikasi
+            // Section Reliability & Permissions
+            Text("Status Kesiapan Sistem", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Card 1: Notification Listener Permission
+            StatusCard(
+                title = if (isListenerEnabled) "Izin Notifikasi WhatsApp Aktif" else "Izin Notifikasi WhatsApp Belum Aktif",
+                subtitle = if (isListenerEnabled) "MbakAdmin dapat membaca & mendeteksi chat masuk" else "Wajib diaktifkan agar bot bisa merespons chat",
+                isOk = isListenerEnabled,
+                actionLabel = "Buka Izin",
+                onActionClick = {
+                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Card 2: Battery Optimization Whitelist
+            StatusCard(
+                title = if (!isBatteryOptimized) "Baterai Bebas Batasan (Aman)" else "Optimasi Baterai Masih Aktif",
+                subtitle = if (!isBatteryOptimized) "Android tidak akan mematikan bot saat layar mati" else "HP dapat mematikan bot sewaktu-waktu demi hemat baterai",
+                isOk = !isBatteryOptimized,
+                actionLabel = "Matikan Batasan",
+                onActionClick = {
+                    BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Card 3: Auto-Start Vendor Manager (Xiaomi/Oppo/Vivo/Infinix)
             Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isListenerEnabled) MaterialTheme.colorScheme.secondaryContainer
-                    else MaterialTheme.colorScheme.errorContainer
-                ),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (isListenerEnabled) Icons.Default.CheckCircle else Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = if (isListenerEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                    )
+                    Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (isListenerEnabled) "Status: MbakAdmin Aktif" else "Izin Notifikasi Belum Aktif",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = if (isListenerEnabled) "Siap membalas chat WhatsApp otomatis"
-                            else "Klik untuk mengaktifkan izin pembaca notifikasi",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text("Auto-Start Khusus HP (${Build.MANUFACTURER.uppercase()})", style = MaterialTheme.typography.titleSmall)
+                        Text("Izinkan app berjalan otomatis saat HP dinyalakan", style = MaterialTheme.typography.bodySmall)
                     }
-                    if (!isListenerEnabled) {
-                        Button(onClick = {
-                            context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                        }) {
-                            Text("Aktifkan")
-                        }
+                    TextButton(onClick = {
+                        BatteryOptimizationHelper.openOemAutoStartSettings(context)
+                    }) {
+                        Text("Buka")
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Section Katalog Produk
             Text("Katalog Produk Lokal (${products.size})", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -161,6 +197,44 @@ fun MainScreen() {
                 }
             }
         )
+    }
+}
+
+@Composable
+fun StatusCard(
+    title: String,
+    subtitle: String,
+    isOk: Boolean,
+    actionLabel: String,
+    onActionClick: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (isOk) MaterialTheme.colorScheme.secondaryContainer
+            else MaterialTheme.colorScheme.errorContainer
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (isOk) Icons.Default.CheckCircle else Icons.Default.Warning,
+                contentDescription = null,
+                tint = if (isOk) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = title, style = MaterialTheme.typography.titleSmall)
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall)
+            }
+            if (!isOk) {
+                Button(onClick = onActionClick, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
+                    Text(actionLabel, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
     }
 }
 

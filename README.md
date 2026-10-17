@@ -20,8 +20,9 @@ Sebagian besar UMKM di Indonesia masih mengandalkan WhatsApp pribadi/bisnis untu
 
 MbakAdmin adalah aplikasi Android native yang bertindak sebagai "asisten toko pribadi" dengan mengotomasi respon WhatsApp menggunakan kecerdasan buatan (AI):
 
-* **Zero-Root Required:** Menggunakan Android OS native API (`NotificationListenerService` & `RemoteInput`).
-* **Katalog Produk 100% Lokal:** Data produk, varian, dan aturan toko disimpan di SQLite/Room database lokal di HP penjual. Privasi terjaga dan zero-server database maintenance.
+- **Zero-Root Required:** Menggunakan Android OS native API (`NotificationListenerService` & `RemoteInput`).
+- **Background Survival & Guardian Service:** Dilengkapi persistent foreground service (`MbakAdminGuardianService`) serta OEM Auto-Start & Battery Optimization helper untuk memastikan bot tidak dibunuh oleh OS saat layar HP mati (Xiaomi, Oppo, Vivo, Samsung, Infinix).
+- **Katalog Produk 100% Lokal:** Data produk, varian, dan aturan toko disimpan di SQLite/Room database lokal di HP penjual. Privasi terjaga dan zero-server database maintenance.
 * **Aman dari Banned:** Respon dikirimkan langsung oleh aplikasi resmi WhatsApp di perangkat pengguna sebagai aksi balasan notifikasi resmi.
 * **Full Context Handling:** Mengurai pesan bertingkat menggunakan format `NotificationCompat.MessagingStyle` untuk menangkap obrolan panjang tanpa terpotong.
 * **Model Bisnis Transparan:** Aplikasi gratis digunakan; biaya hanya dikenakan berbasis penggunaan kuota token AI.
