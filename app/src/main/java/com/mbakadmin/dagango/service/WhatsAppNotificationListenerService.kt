@@ -16,6 +16,7 @@ import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -23,6 +24,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -34,8 +36,14 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         .readTimeout(25, TimeUnit.SECONDS)
         .build()
 
-    // Cache untuk mencegah membalas pesan yang sama berulang-ulang
+    // Cache untuk mencegah membalas pesan yang sama dalam jendela 20 detik (berbasis Sender + Teks)
     private val processedMessageCache = ConcurrentHashMap<String, Long>()
+
+    // Set lock untuk mencegah konkurensi (jika WhatsApp mengirim beberapa event notifikasi sekaligus)
+    private val inFlightMessages = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+
+    // Cache balasan yang baru saja dikirim bot agar tidak membalas pesan sendiri jika terjadi echo di notifikasi
+    private val recentSentReplies = ConcurrentHashMap<String, Long>()
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
@@ -47,14 +55,28 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
 
         val notification = sbn.notification ?: return
 
-        // 1. Ekstrak pesan menggunakan MessagingStyle (Anti-Truncate)
+        // 1. FILTER KRUSIAL: Abaikan Group Summary Notification
+        // WhatsApp selalu menerbitkan 2 notifikasi: notifikasi chat individual + notifikasi summary grup.
+        // Jika summary tidak diabaikan, setiap chat akan diproses 2 kali!
+        if ((notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0) {
+            return
+        }
+
+        // 2. Ekstrak pesan menggunakan MessagingStyle (Anti-Truncate)
         val messagingStyle = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(notification)
-        
+
         var senderName = "Kak"
         var incomingText = ""
 
         if (messagingStyle != null && messagingStyle.messages.isNotEmpty()) {
             val latestMessage = messagingStyle.messages.last()
+
+            // FILTER KRUSIAL: Abaikan pesan yang dikirim oleh diri sendiri (bot/user reply)
+            // Di Android MessagingStyle, jika person == null maka pesan tersebut berasal dari pengguna lokal
+            if (latestMessage.person == null) {
+                return
+            }
+
             incomingText = latestMessage.text?.toString() ?: ""
             senderName = latestMessage.person?.name?.toString() ?: "Kak"
         } else {
@@ -72,26 +94,54 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        // 2. Cegah duplikasi respon dalam interval 10 detik
-        val messageHash = "${sbn.key}_${incomingText.trim()}"
+        // Filter: Abaikan pesan dari diri sendiri
+        if (senderName.equals("You", ignoreCase = true) || senderName.equals("Anda", ignoreCase = true)) {
+            return
+        }
+
+        // Filter: Abaikan jika incomingText adalah echo dari balasan yang baru saja dikirim bot
+        val cleanIncoming = incomingText.trim()
+        if (recentSentReplies.containsKey(cleanIncoming)) {
+            return
+        }
+
+        // 3. DEDUP GLOBAL KUAT: Gunakan (Tag/Sender + Teks), JANGAN gunakan sbn.key!
+        // sbn.key berubah saat notifikasi diupdate oleh sistem/WhatsApp sehingga hash lama tidak cocok.
+        val chatIdentifier = sbn.tag ?: senderName
+        val messageHash = "${chatIdentifier}_${cleanIncoming}"
         val now = System.currentTimeMillis()
         val lastProcessed = processedMessageCache[messageHash] ?: 0L
-        if (now - lastProcessed < 10_000) {
+        if (now - lastProcessed < 20_000) {
+            return
+        }
+
+        // 4. IN-FLIGHT LOCK: Mencegah eksekusi paralel pada pesan yang sama
+        if (!inFlightMessages.add(messageHash)) {
             return
         }
         processedMessageCache[messageHash] = now
 
-        // 3. Ekstrak Action Reply & RemoteInput dari Notifikasi
-        val replyAction = extractReplyAction(notification) ?: return
+        // 5. Ekstrak Action Reply & RemoteInput dari Notifikasi
+        val replyAction = extractReplyAction(notification)
+        if (replyAction == null) {
+            inFlightMessages.remove(messageHash)
+            return
+        }
 
-        // 4. Proses respon AI di background coroutine
+        // 6. Proses respon AI di background coroutine dengan isolasi lock
         serviceScope.launch {
-            handleIncomingCustomerMessage(
-                context = applicationContext,
-                senderName = senderName,
-                customerMessage = incomingText,
-                replyAction = replyAction
-            )
+            try {
+                handleIncomingCustomerMessage(
+                    context = applicationContext,
+                    senderName = senderName,
+                    customerMessage = incomingText,
+                    replyAction = replyAction
+                )
+            } finally {
+                // Beri jeda 15 detik sebelum melepas lock agar bounce update notifikasi selesai
+                delay(15_000)
+                inFlightMessages.remove(messageHash)
+            }
         }
     }
 
@@ -205,6 +255,14 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         try {
             pendingIntent.send(context, 0, intent)
             Log.d(TAG, "MbakAdmin sukses mengirim balasan otomatis: $replyText")
+
+            // Catat teks yang dikirim agar jika WhatsApp memantulkan pesan ini di notifikasi, tidak dibalas lagi
+            val cleanReply = replyText.trim()
+            recentSentReplies[cleanReply] = System.currentTimeMillis()
+
+            // Bersihkan entri lama di recentSentReplies (> 60 detik)
+            val cutoff = System.currentTimeMillis() - 60_000
+            recentSentReplies.entries.removeIf { it.value < cutoff }
         } catch (e: PendingIntent.CanceledException) {
             Log.e(TAG, "Gagal mengirim PendingIntent: ${e.message}")
         } catch (e: Exception) {
