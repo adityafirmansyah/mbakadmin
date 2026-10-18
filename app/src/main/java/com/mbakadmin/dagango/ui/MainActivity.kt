@@ -748,7 +748,7 @@ fun StoreSettingsTab(
                         value = orderFormatTemplate,
                         onValueChange = { orderFormatTemplate = it },
                         label = { Text("Template Format Pemesanan") },
-                        placeholder = { Text("Nama Penerima:\nNo. HP/WA:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:") },
+                        placeholder = { Text("Nama Penerima:\nNo. HP/WA:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:\nKecamatan & Kota:") },
                         supportingText = { Text("Format yang dikirimkan bot saat pembeli berniat order.") },
                         minLines = 4,
                         modifier = Modifier.fillMaxWidth()
@@ -799,7 +799,7 @@ fun StoreSettingsTab(
                         shippingInfo = shippingInfo,
                         defaultShippingFee = defaultShippingFee.toDoubleOrNull() ?: 15000.0,
                         orderFormatTemplate = orderFormatTemplate.ifBlank {
-                            "Nama Penerima:\nNo. HP/WA:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:"
+                            "Nama Penerima:\nNo. HP/WA:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:\nKecamatan & Kota:"
                         },
                         botTone = botTone,
                         fallbackReplyMessage = fallbackReplyMessage.ifBlank {
