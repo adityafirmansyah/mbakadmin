@@ -21,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -589,13 +590,14 @@ fun StoreSettingsTab(
     var fallbackReplyMessage by remember(currentSettings) { mutableStateOf(currentSettings.fallbackReplyMessage) }
     var orderFormatTemplate by remember(currentSettings) { mutableStateOf(currentSettings.orderFormatTemplate) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 86.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
         // --- SECTION 1: PROFIL TOKO & ADMIN ---
         Text("Profil Toko & Admin", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
@@ -746,7 +748,7 @@ fun StoreSettingsTab(
                         value = orderFormatTemplate,
                         onValueChange = { orderFormatTemplate = it },
                         label = { Text("Template Format Pemesanan") },
-                        placeholder = { Text("Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:") },
+                        placeholder = { Text("Nama Penerima:\nNo. HP/WA:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:") },
                         supportingText = { Text("Format yang dikirimkan bot saat pembeli berniat order.") },
                         minLines = 4,
                         modifier = Modifier.fillMaxWidth()
@@ -777,10 +779,16 @@ fun StoreSettingsTab(
                 }
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // --- SECTION 4: TOMBOL SIMPAN PENGATURAN ---
+    // --- TOMBOL SIMPAN PENGATURAN (FLOATING DI ATAS MENU) ---
+    Surface(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        color = Color.Transparent
+    ) {
         Button(
             onClick = {
                 onSaveSettings(
@@ -791,7 +799,7 @@ fun StoreSettingsTab(
                         shippingInfo = shippingInfo,
                         defaultShippingFee = defaultShippingFee.toDoubleOrNull() ?: 15000.0,
                         orderFormatTemplate = orderFormatTemplate.ifBlank {
-                            "Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:"
+                            "Nama Penerima:\nNo. HP/WA:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:"
                         },
                         botTone = botTone,
                         fallbackReplyMessage = fallbackReplyMessage.ifBlank {
@@ -805,13 +813,18 @@ fun StoreSettingsTab(
                     )
                 )
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = MaterialTheme.shapes.medium,
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp, pressedElevation = 2.dp)
         ) {
             Icon(Icons.Default.Save, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Simpan Pengaturan")
+            Text("Simpan Pengaturan", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         }
     }
+}
 }
 
 @Composable
