@@ -23,7 +23,6 @@ import com.mbakadmin.dagango.service.MbakAdminGuardianService
 import com.mbakadmin.dagango.ui.dialogs.FulfillmentDialog
 import com.mbakadmin.dagango.ui.dialogs.ProductDialog
 import com.mbakadmin.dagango.ui.dialogs.ShippingDialog
-import com.mbakadmin.dagango.ui.navigation.WhatsAppNavigationHelper
 import com.mbakadmin.dagango.ui.tabs.CatalogTab
 import com.mbakadmin.dagango.ui.tabs.ChatLogsTab
 import com.mbakadmin.dagango.ui.tabs.StoreSettingsTab
@@ -57,13 +56,13 @@ fun MainScreen() {
 
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Katalog, 1: Riwayat Chat, 2: Toko & AI, 3: Sistem
 
-    var isListenerEnabled by remember { mutableStateOf(WhatsAppNavigationHelper.isNotificationServiceEnabled(context)) }
+    var isListenerEnabled by remember { mutableStateOf(isNotificationServiceEnabled(context)) }
     var isBatteryOptimized by remember { mutableStateOf(!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                isListenerEnabled = WhatsAppNavigationHelper.isNotificationServiceEnabled(context)
+                isListenerEnabled = isNotificationServiceEnabled(context)
                 isBatteryOptimized = !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
                 if (isListenerEnabled) {
                     MbakAdminGuardianService.startService(context)
@@ -212,7 +211,7 @@ fun MainScreen() {
                         }
                     },
                     onDirectSendWa = { phone, msg ->
-                        WhatsAppNavigationHelper.openWhatsAppMessage(context, phone, msg, settings?.targetWhatsAppPackage ?: "ALL")
+                        openWhatsAppMessage(context, phone, msg, settings?.targetWhatsAppPackage ?: "ALL")
                     }
                 )
                 2 -> StoreSettingsTab(
@@ -278,7 +277,7 @@ fun MainScreen() {
                     if (sendWa) {
                         val adminName = settings?.adminName?.ifBlank { "Mbak Admin" } ?: "Mbak Admin"
                         val waMsg = "Halo kak ${log.senderName}! Pembayaran untuk pesanan kakak sudah diverifikasi lunas ya oleh $adminName. Pesanan sedang disiapkan untuk packing & pengiriman. Terima kasih banyak! 🙏"
-                        WhatsAppNavigationHelper.openWhatsAppMessage(context, log.customerPhone, waMsg, settings?.targetWhatsAppPackage ?: "ALL")
+                        openWhatsAppMessage(context, log.customerPhone, waMsg, settings?.targetWhatsAppPackage ?: "ALL")
                     }
                 }
             }
@@ -298,7 +297,7 @@ fun MainScreen() {
                     if (sendWa) {
                         val adminName = settings?.adminName?.ifBlank { "Mbak Admin" } ?: "Mbak Admin"
                         val waMsg = "Halo kak ${log.senderName}! Pesanan kakak sudah dikirim oleh $adminName via $courier dengan nomor resi: $trackingNum. Bisa dicek berkala ya kak, terima kasih banyak! 🙏"
-                        WhatsAppNavigationHelper.openWhatsAppMessage(context, log.customerPhone, waMsg, settings?.targetWhatsAppPackage ?: "ALL")
+                        openWhatsAppMessage(context, log.customerPhone, waMsg, settings?.targetWhatsAppPackage ?: "ALL")
                     }
                 }
             }
