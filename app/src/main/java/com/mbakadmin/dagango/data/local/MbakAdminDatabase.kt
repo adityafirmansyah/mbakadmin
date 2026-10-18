@@ -15,7 +15,7 @@ import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 
 @Database(
     entities = [ProductEntity::class, StoreSettingsEntity::class, ChatLogEntity::class],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class MbakAdminDatabase : RoomDatabase() {
@@ -151,6 +151,24 @@ abstract class MbakAdminDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migrasi aman dari Versi 7 ke Versi 8:
+         * Memindahkan 'Alamat Lengkap' ke baris terakhir pada template format pemesanan default toko.
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL(
+                        """
+                        UPDATE store_settings 
+                        SET orderFormatTemplate = 'Nama Penerima:\nNo. HP/WA:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:'
+                        WHERE orderFormatTemplate = 'Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:'
+                        """.trimIndent()
+                    )
+                } catch (_: Exception) {}
+            }
+        }
+
         fun getInstance(context: Context): MbakAdminDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -158,7 +176,7 @@ abstract class MbakAdminDatabase : RoomDatabase() {
                     MbakAdminDatabase::class.java,
                     "mbakadmin.db"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                 .build()
                 INSTANCE = instance
                 instance

@@ -20,7 +20,7 @@ data class StoreSettingsEntity(
     val aiTimeoutSeconds: Int = 60,
     val fallbackReplyMessage: String = "Halo kak! Pesan sudah {admin} terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏",
     val defaultShippingFee: Double = 15000.0,
-    val orderFormatTemplate: String = "Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:",
+    val orderFormatTemplate: String = "Nama Penerima:\nNo. HP/WA:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:",
     val targetWhatsAppPackage: String = "ALL", // "ALL", "WHATSAPP_BUSINESS", "WHATSAPP_STANDARD"
     val onlyReplyUnknownContacts: Boolean = false
 ) {
