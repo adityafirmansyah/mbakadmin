@@ -138,11 +138,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
     }
 
     private fun extractReplyAction(notification: Notification): NotificationCompat.Action? {
-        val wearableExtender = NotificationCompat.WearableExtender(notification)
-        for (action in wearableExtender.actions) {
-            if (hasRemoteInput(action)) return action
-        }
-
+        // 1. Coba dari direct notification actions
         val actionsCount = NotificationCompat.getActionCount(notification)
         for (i in 0 until actionsCount) {
             val action = NotificationCompat.getAction(notification, i)
@@ -150,6 +146,37 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
                 return action
             }
         }
+
+        // 2. Coba dari WearableExtender actions (WhatsApp sering menaruh remote input di sini)
+        val wearableExtender = NotificationCompat.WearableExtender(notification)
+        for (action in wearableExtender.actions) {
+            if (hasRemoteInput(action)) return action
+        }
+
+        // 3. Fallback: Cek actions dari standard notification.actions (Android framework)
+        notification.actions?.forEach { frameworkAction ->
+            frameworkAction.remoteInputs?.let { remoteInputs ->
+                if (remoteInputs.isNotEmpty() && frameworkAction.actionIntent != null) {
+                    val compatBuilder = NotificationCompat.Action.Builder(
+                        frameworkAction.icon,
+                        frameworkAction.title,
+                        frameworkAction.actionIntent
+                    )
+                    remoteInputs.forEach { ri ->
+                        compatBuilder.addRemoteInput(
+                            RemoteInput.Builder(ri.resultKey)
+                                .setLabel(ri.label)
+                                .setChoices(ri.choices)
+                                .setAllowFreeFormInput(ri.allowFreeFormInput)
+                                .addExtras(ri.extras)
+                                .build()
+                        )
+                    }
+                    return compatBuilder.build()
+                }
+            }
+        }
+
         return null
     }
 
@@ -173,6 +200,8 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
             Log.d(TAG, "MbakAdmin sukses mengirim balasan otomatis: $replyText")
         } catch (e: PendingIntent.CanceledException) {
             Log.e(TAG, "Gagal mengirim PendingIntent: ${e.message}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saat eksekusi reply PendingIntent: ${e.message}")
         }
     }
 
