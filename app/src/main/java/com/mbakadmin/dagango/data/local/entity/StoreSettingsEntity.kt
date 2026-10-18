@@ -17,5 +17,6 @@ data class StoreSettingsEntity(
     val aiApiBaseUrl: String = "https://api.openai.com/v1",
     val aiApiKey: String = "",
     val aiModel: String = "gpt-4o-mini",
-    val aiTimeoutSeconds: Int = 60
+    val aiTimeoutSeconds: Int = 60,
+    val fallbackReplyMessage: String = "Halo kak! Pesan sudah {admin} terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"
 )

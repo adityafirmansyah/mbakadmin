@@ -166,6 +166,10 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         val userPrompt = "Pembeli ($senderName): \"$customerMessage\"\nBalaslah sebagai Mbak Admin toko dengan format singkat, ramah, dan solutif."
 
         val adminName = settings.adminName.ifBlank { "Mbak Admin" }
+        val fallbackTemplate = settings.fallbackReplyMessage.ifBlank {
+            "Halo kak! Pesan sudah {admin} terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"
+        }
+        val fallbackMsg = fallbackTemplate.replace("{admin}", adminName)
 
         // 6. Request ke AI Engine
         val aiReply = callAiEngine(settings, systemPrompt, userPrompt)
@@ -174,7 +178,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         val finalReply = if (aiReply.isNotBlank()) {
             aiReply
         } else {
-            "Halo kak! Pesan sudah $adminName terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"
+            fallbackMsg
         }
 
         // 8. Kirim balasan via RemoteInput (100% Native Background)
@@ -307,11 +311,9 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
     }
 
     private fun callAiEngine(settings: StoreSettingsEntity, systemPrompt: String, userPrompt: String): String {
-        val adminName = settings.adminName.ifBlank { "Mbak Admin" }
-
-        // Fallback jika API key belum diisi pengguna
+        // Jika API key belum diisi pengguna
         if (settings.aiApiKey.isBlank()) {
-            return "Halo kak! Pesan sudah $adminName terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"
+            return ""
         }
 
         try {
