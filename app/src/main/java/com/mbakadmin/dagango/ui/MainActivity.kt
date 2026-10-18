@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -87,6 +90,8 @@ fun MainScreen() {
 
     var showAddEditProductDialog by remember { mutableStateOf<ProductEntity?>(null) }
     var isCreatingNewProduct by remember { mutableStateOf(false) }
+    var fulfillmentLog by remember { mutableStateOf<ChatLogEntity?>(null) }
+    var shippingLog by remember { mutableStateOf<ChatLogEntity?>(null) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -207,12 +212,16 @@ fun MainScreen() {
                 )
                 1 -> ChatLogsTab(
                     chatLogs = chatLogs,
-                    onVerifyPayment = { logId, isVerified ->
+                    onVerifyClick = { log -> fulfillmentLog = log },
+                    onShippingClick = { log -> shippingLog = log },
+                    onCancelVerify = { logId ->
                         scope.launch {
-                            app.database.chatLogDao().updateVerificationStatus(logId, isVerified)
-                            val msg = if (isVerified) "Pembayaran berhasil diverifikasi! ✅" else "Status verifikasi dibatalkan"
-                            snackbarHostState.showSnackbar(msg)
+                            app.database.chatLogDao().updateVerificationStatus(logId, false, "PENDING")
+                            snackbarHostState.showSnackbar("Status verifikasi dibatalkan")
                         }
+                    },
+                    onDirectSendWa = { phone, msg ->
+                        openWhatsAppMessage(context, phone, msg)
                     }
                 )
                 2 -> StoreSettingsTab(
@@ -256,6 +265,50 @@ fun MainScreen() {
                     app.database.productDao().updateProduct(updated)
                     showAddEditProductDialog = null
                     snackbarHostState.showSnackbar("Perubahan '${updated.name}' tersimpan!")
+                }
+            }
+        )
+    }
+
+    fulfillmentLog?.let { log ->
+        FulfillmentDialog(
+            log = log,
+            products = products,
+            onDismiss = { fulfillmentLog = null },
+            onConfirmFulfillment = { selectedProduct, qty, sendWa ->
+                scope.launch {
+                    if (selectedProduct != null && qty > 0) {
+                        app.database.productDao().deductStock(selectedProduct.id, qty)
+                    }
+                    app.database.chatLogDao().updateVerificationStatus(log.id, true, "VERIFIED")
+                    fulfillmentLog = null
+                    snackbarHostState.showSnackbar("Pembayaran diverifikasi & stok diperbarui! ✅")
+
+                    if (sendWa) {
+                        val adminName = settings?.adminName?.ifBlank { "Mbak Admin" } ?: "Mbak Admin"
+                        val waMsg = "Halo kak ${log.senderName}! Pembayaran untuk pesanan kakak sudah diverifikasi lunas ya oleh $adminName. Pesanan sedang disiapkan untuk packing & pengiriman. Terima kasih banyak! 🙏"
+                        openWhatsAppMessage(context, log.customerPhone, waMsg)
+                    }
+                }
+            }
+        )
+    }
+
+    shippingLog?.let { log ->
+        ShippingDialog(
+            log = log,
+            onDismiss = { shippingLog = null },
+            onConfirmShipping = { courier, trackingNum, sendWa ->
+                scope.launch {
+                    app.database.chatLogDao().updateShippingInfo(log.id, trackingNum, courier)
+                    shippingLog = null
+                    snackbarHostState.showSnackbar("Resi berhasil disimpan! 📦")
+
+                    if (sendWa) {
+                        val adminName = settings?.adminName?.ifBlank { "Mbak Admin" } ?: "Mbak Admin"
+                        val waMsg = "Halo kak ${log.senderName}! Pesanan kakak sudah dikirim oleh $adminName via $courier dengan nomor resi: $trackingNum. Bisa dicek berkala ya kak, terima kasih banyak! 🙏"
+                        openWhatsAppMessage(context, log.customerPhone, waMsg)
+                    }
                 }
             }
         )
@@ -348,7 +401,10 @@ fun CatalogTab(
 @Composable
 fun ChatLogsTab(
     chatLogs: List<ChatLogEntity>,
-    onVerifyPayment: (Long, Boolean) -> Unit = { _, _ -> }
+    onVerifyClick: (ChatLogEntity) -> Unit = {},
+    onShippingClick: (ChatLogEntity) -> Unit = {},
+    onCancelVerify: (Long) -> Unit = {},
+    onDirectSendWa: (String, String) -> Unit = { _, _ -> }
 ) {
     if (chatLogs.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -410,15 +466,15 @@ fun ChatLogsTab(
                             )
                         }
 
-                        // Human Verification Banner & Action
+                        // Human Verification & Fulfillment Section
                         if (log.isPaymentClaimed) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                if (!log.isVerifiedByHuman) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            if (!log.isVerifiedByHuman) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
                                     Surface(
                                         color = MaterialTheme.colorScheme.errorContainer,
                                         shape = MaterialTheme.shapes.extraSmall
@@ -431,27 +487,78 @@ fun ChatLogsTab(
                                         )
                                     }
                                     Button(
-                                        onClick = { onVerifyPayment(log.id, true) },
+                                        onClick = { onVerifyClick(log) },
                                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                                     ) {
                                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Verifikasi", style = MaterialTheme.typography.labelSmall)
+                                        Text("Verifikasi & Proses", style = MaterialTheme.typography.labelSmall)
                                     }
-                                } else {
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        shape = MaterialTheme.shapes.extraSmall
+                                }
+                            } else {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text(
-                                            text = "✅ Pembayaran Terverifikasi",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            shape = MaterialTheme.shapes.extraSmall
+                                        ) {
+                                            Text(
+                                                text = "✅ Pembayaran Terverifikasi",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                        TextButton(onClick = { onCancelVerify(log.id) }) {
+                                            Text("Batal Verifikasi", style = MaterialTheme.typography.labelSmall)
+                                        }
                                     }
-                                    TextButton(onClick = { onVerifyPayment(log.id, false) }) {
-                                        Text("Batal Verifikasi", style = MaterialTheme.typography.labelSmall)
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    // Shipping / Resi Info
+                                    if (log.trackingNumber.isBlank()) {
+                                        OutlinedButton(
+                                            onClick = { onShippingClick(log) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                        ) {
+                                            Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("🚚 Input Nomor Resi Pengiriman", style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    } else {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.secondaryContainer,
+                                            shape = MaterialTheme.shapes.small,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                modifier = Modifier.padding(8.dp)
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = "📦 Resi: ${log.courierName} - ${log.trackingNumber}",
+                                                        style = MaterialTheme.typography.labelMedium
+                                                    )
+                                                }
+                                                IconButton(
+                                                    onClick = {
+                                                        val msg = "Halo kak ${log.senderName}! Pesanan kakak sudah dikirim via ${log.courierName} dengan no. resi: ${log.trackingNumber}. Terima kasih sudah belanja di toko kami! 🙏"
+                                                        onDirectSendWa(log.customerPhone, msg)
+                                                    },
+                                                    modifier = Modifier.size(28.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Send, contentDescription = "Kirim Resi ke WA", tint = MaterialTheme.colorScheme.primary)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -962,4 +1069,251 @@ private fun extractAiResponseContent(rawBody: String): String {
     }
 
     return ""
+}
+
+fun openWhatsAppMessage(context: Context, phone: String, message: String) {
+    try {
+        val encoded = java.net.URLEncoder.encode(message, "UTF-8")
+        val cleanPhone = phone.filter { it.isDigit() }
+        val finalPhone = if (cleanPhone.startsWith("0")) "62" + cleanPhone.substring(1) else cleanPhone
+        val uri = if (finalPhone.isNotBlank()) {
+            android.net.Uri.parse("https://api.whatsapp.com/send?phone=$finalPhone&text=$encoded")
+        } else {
+            android.net.Uri.parse("https://api.whatsapp.com/send?text=$encoded")
+        }
+        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+            setPackage("com.whatsapp")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        try {
+            val encoded = java.net.URLEncoder.encode(message, "UTF-8")
+            val fallbackUri = android.net.Uri.parse("https://api.whatsapp.com/send?text=$encoded")
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, fallbackUri).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
+        } catch (_: Exception) {
+            android.widget.Toast.makeText(context, "Aplikasi WhatsApp tidak ditemukan", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+@Composable
+fun FulfillmentDialog(
+    log: ChatLogEntity,
+    products: List<ProductEntity>,
+    onDismiss: () -> Unit,
+    onConfirmFulfillment: (ProductEntity?, Int, Boolean) -> Unit
+) {
+    var selectedProduct by remember { mutableStateOf<ProductEntity?>(products.firstOrNull()) }
+    var qtyText by remember { mutableStateOf("1") }
+    var sendWhatsAppConfirmation by remember { mutableStateOf(true) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Verifikasi & Proses Pesanan", style = MaterialTheme.typography.titleMedium)
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Pembeli: ${log.senderName}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                if (log.customerPhone.isNotBlank()) {
+                    Text(
+                        text = "📱 No. HP/WA: ${log.customerPhone}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Pesan Pembeli: \"${log.incomingMessage}\"",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+
+                HorizontalDivider()
+
+                Text("Potong Stok Otomatis (Opsional):", style = MaterialTheme.typography.labelMedium)
+
+                if (products.isEmpty()) {
+                    Text("Belum ada produk di katalog.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                } else {
+                    products.forEach { prod ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedProduct = if (selectedProduct?.id == prod.id) null else prod }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            RadioButton(
+                                selected = selectedProduct?.id == prod.id,
+                                onClick = { selectedProduct = if (selectedProduct?.id == prod.id) null else prod }
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(prod.name, style = MaterialTheme.typography.bodyMedium)
+                                Text("Sisa Stok: ${prod.stock} | Rp${prod.price.toInt()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            }
+                        }
+                    }
+
+                    if (selectedProduct != null) {
+                        OutlinedTextField(
+                            value = qtyText,
+                            onValueChange = { qtyText = it.filter { c -> c.isDigit() } },
+                            label = { Text("Jumlah Terjual (Qty)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                HorizontalDivider()
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { sendWhatsAppConfirmation = !sendWhatsAppConfirmation }
+                ) {
+                    Checkbox(
+                        checked = sendWhatsAppConfirmation,
+                        onCheckedChange = { sendWhatsAppConfirmation = it }
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Kirim pesan konfirmasi lunas ke WhatsApp pembeli",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val qty = qtyText.toIntOrNull() ?: 1
+                    onConfirmFulfillment(selectedProduct, qty, sendWhatsAppConfirmation)
+                }
+            ) {
+                Text("Verifikasi Pembayaran")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
+}
+
+@Composable
+fun ShippingDialog(
+    log: ChatLogEntity,
+    onDismiss: () -> Unit,
+    onConfirmShipping: (String, String, Boolean) -> Unit
+) {
+    var courierName by remember { mutableStateOf(if (log.courierName.isNotBlank()) log.courierName else "J&T Express") }
+    var trackingNumber by remember { mutableStateOf(log.trackingNumber) }
+    var sendWhatsAppResi by remember { mutableStateOf(true) }
+
+    val commonCouriers = listOf("J&T Express", "JNE", "SiCepat", "Shopee Xpress", "Pos Indonesia", "GoSend/Grab")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Input Nomor Resi Pengiriman", style = MaterialTheme.typography.titleMedium)
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Penerima: ${log.senderName}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text("Pilih Ekspedisi / Kurir:", style = MaterialTheme.typography.labelMedium)
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    commonCouriers.forEach { courier ->
+                        FilterChip(
+                            selected = courierName == courier,
+                            onClick = { courierName = courier },
+                            label = { Text(courier, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = courierName,
+                    onValueChange = { courierName = it },
+                    label = { Text("Nama Ekspedisi") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = trackingNumber,
+                    onValueChange = { trackingNumber = it },
+                    label = { Text("Nomor Resi") },
+                    placeholder = { Text("Contoh: JT1234567890") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { sendWhatsAppResi = !sendWhatsAppResi }
+                ) {
+                    Checkbox(
+                        checked = sendWhatsAppResi,
+                        onCheckedChange = { sendWhatsAppResi = it }
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Kirim info resi ke WhatsApp pembeli",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (trackingNumber.isNotBlank()) {
+                        onConfirmShipping(courierName.ifBlank { "Kurir" }, trackingNumber, sendWhatsAppResi)
+                    }
+                },
+                enabled = trackingNumber.isNotBlank()
+            ) {
+                Text("Simpan & Kirim Resi")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
 }

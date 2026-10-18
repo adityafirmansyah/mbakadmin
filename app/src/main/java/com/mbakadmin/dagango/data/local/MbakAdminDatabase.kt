@@ -15,7 +15,7 @@ import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 
 @Database(
     entities = [ProductEntity::class, StoreSettingsEntity::class, ChatLogEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class MbakAdminDatabase : RoomDatabase() {
@@ -115,6 +115,27 @@ abstract class MbakAdminDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migrasi aman dari Versi 5 ke Versi 6:
+         * Menambahkan trackingNumber, courierName, orderStatus, customerPhone untuk fulfillment.
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE chat_logs ADD COLUMN trackingNumber TEXT NOT NULL DEFAULT ''")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE chat_logs ADD COLUMN courierName TEXT NOT NULL DEFAULT ''")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE chat_logs ADD COLUMN orderStatus TEXT NOT NULL DEFAULT 'PENDING'")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE chat_logs ADD COLUMN customerPhone TEXT NOT NULL DEFAULT ''")
+                } catch (_: Exception) {}
+            }
+        }
+
         fun getInstance(context: Context): MbakAdminDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -122,7 +143,7 @@ abstract class MbakAdminDatabase : RoomDatabase() {
                     MbakAdminDatabase::class.java,
                     "mbakadmin.db"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 INSTANCE = instance
                 instance

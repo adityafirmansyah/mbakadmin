@@ -12,5 +12,9 @@ data class ChatLogEntity(
     val aiReply: String,
     val timestamp: Long = System.currentTimeMillis(),
     val isPaymentClaimed: Boolean = false,
-    val isVerifiedByHuman: Boolean = false
+    val isVerifiedByHuman: Boolean = false,
+    val trackingNumber: String = "",
+    val courierName: String = "",
+    val orderStatus: String = "PENDING", // PENDING, VERIFIED, SHIPPED
+    val customerPhone: String = ""
 )

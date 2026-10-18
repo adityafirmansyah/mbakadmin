@@ -16,6 +16,9 @@ interface ProductDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProduct(product: ProductEntity): Long
 
+    @Query("UPDATE products SET stock = MAX(0, stock - :qty) WHERE id = :productId")
+    suspend fun deductStock(productId: Long, qty: Int)
+
     @Update
     suspend fun updateProduct(product: ProductEntity)
 
@@ -46,8 +49,11 @@ interface ChatLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChatLog(chatLog: com.mbakadmin.dagango.data.local.entity.ChatLogEntity): Long
 
-    @Query("UPDATE chat_logs SET isVerifiedByHuman = :isVerified WHERE id = :id")
-    suspend fun updateVerificationStatus(id: Long, isVerified: Boolean)
+    @Query("UPDATE chat_logs SET isVerifiedByHuman = :isVerified, orderStatus = :status WHERE id = :id")
+    suspend fun updateVerificationStatus(id: Long, isVerified: Boolean, status: String = "VERIFIED")
+
+    @Query("UPDATE chat_logs SET trackingNumber = :trackingNumber, courierName = :courierName, orderStatus = 'SHIPPED' WHERE id = :id")
+    suspend fun updateShippingInfo(id: Long, trackingNumber: String, courierName: String)
 
     @Query("DELETE FROM chat_logs")
     suspend fun clearChatLogs()
