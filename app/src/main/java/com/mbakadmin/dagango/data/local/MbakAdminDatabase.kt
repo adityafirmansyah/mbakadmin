@@ -15,7 +15,7 @@ import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 
 @Database(
     entities = [ProductEntity::class, StoreSettingsEntity::class, ChatLogEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class MbakAdminDatabase : RoomDatabase() {
@@ -62,6 +62,20 @@ abstract class MbakAdminDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migrasi aman dari Versi 2 ke Versi 3:
+         * Menambahkan kolom aiTimeoutSeconds.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE store_settings ADD COLUMN aiTimeoutSeconds INTEGER NOT NULL DEFAULT 60")
+                } catch (_: Exception) {
+                    // Kolom sudah ada
+                }
+            }
+        }
+
         fun getInstance(context: Context): MbakAdminDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -69,8 +83,7 @@ abstract class MbakAdminDatabase : RoomDatabase() {
                     MbakAdminDatabase::class.java,
                     "mbakadmin.db"
                 )
-                // HAPUS fallbackToDestructiveMigration() untuk mencegah data UMKM terhapus saat update
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 INSTANCE = instance
                 instance
