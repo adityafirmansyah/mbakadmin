@@ -331,6 +331,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
                 })
                 put("temperature", 0.7)
                 put("max_tokens", 200)
+                put("stream", false)
             }
 
             var baseUrl = settings.aiApiBaseUrl.trim()
@@ -366,17 +367,61 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
                     return ""
                 }
                 val body = response.body?.string() ?: return ""
-                val json = JSONObject(body)
-                val choices = json.optJSONArray("choices") ?: return ""
-                if (choices.length() > 0) {
-                    val choice = choices.getJSONObject(0)
-                    val message = choice.optJSONObject("message")
-                    return message?.optString("content")?.trim() ?: ""
-                }
+                return parseAiResponseContent(body)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Gagal request AI: ${e.message}")
         }
+        return ""
+    }
+
+    private fun parseAiResponseContent(rawBody: String): String {
+        val body = rawBody.trim()
+        if (body.isBlank()) return ""
+
+        // 1. Coba parse sebagai standard JSON response
+        if (body.startsWith("{")) {
+            try {
+                val json = JSONObject(body)
+                val choices = json.optJSONArray("choices")
+                if (choices != null && choices.length() > 0) {
+                    val choice = choices.getJSONObject(0)
+                    val message = choice.optJSONObject("message")
+                    val content = message?.optString("content")
+                    if (!content.isNullOrBlank()) return content.trim()
+
+                    val delta = choice.optJSONObject("delta")
+                    val deltaContent = delta?.optString("content")
+                    if (!deltaContent.isNullOrBlank()) return deltaContent.trim()
+                }
+            } catch (_: Exception) {}
+        }
+
+        // 2. Fallback parse SSE stream (data: {...}\n\ndata: {...}) jika gateway mengirim stream
+        if (body.contains("data:")) {
+            val contentBuilder = StringBuilder()
+            body.lines().forEach { line ->
+                val trimmed = line.trim()
+                if (trimmed.startsWith("data:") && !trimmed.contains("[DONE]")) {
+                    val jsonStr = trimmed.removePrefix("data:").trim()
+                    try {
+                        val json = JSONObject(jsonStr)
+                        val choices = json.optJSONArray("choices")
+                        if (choices != null && choices.length() > 0) {
+                            val choice = choices.getJSONObject(0)
+                            val delta = choice.optJSONObject("delta")
+                            val part = delta?.optString("content")
+                            if (!part.isNullOrEmpty()) {
+                                contentBuilder.append(part)
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
+            val sseResult = contentBuilder.toString().trim()
+            if (sseResult.isNotBlank()) return sseResult
+        }
+
         return ""
     }
 
