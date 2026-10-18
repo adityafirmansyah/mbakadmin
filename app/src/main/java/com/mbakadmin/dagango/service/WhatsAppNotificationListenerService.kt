@@ -161,9 +161,11 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
 
         val products = db.productDao().getActiveProducts()
 
-        // 5. Susun Konteks Toko & Prompt untuk AI
+        // 5. Ambil riwayat percakapan sebelumnya untuk customer ini (Multi-turn conversational context)
+        val historyLogs = db.chatLogDao().getRecentMessagesForSender(senderName, limit = 6)
+
+        // 6. Susun Konteks Toko & Prompt untuk AI
         val systemPrompt = buildSystemPrompt(settings, products)
-        val userPrompt = "Pembeli ($senderName): \"$customerMessage\"\nBalaslah sebagai Mbak Admin toko dengan format singkat, ramah, dan solutif."
 
         val adminName = settings.adminName.ifBlank { "Mbak Admin" }
         val fallbackTemplate = settings.fallbackReplyMessage.ifBlank {
@@ -171,26 +173,39 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         }
         val fallbackMsg = fallbackTemplate.replace("{admin}", adminName)
 
-        // 6. Request ke AI Engine
-        val aiReply = callAiEngine(settings, systemPrompt, userPrompt)
+        // 7. Request ke AI Engine dengan konteks riwayat percakapan
+        val aiReply = callAiEngine(settings, systemPrompt, historyLogs, customerMessage)
 
-        // 7. Jika AI berhasil atau fallback jika error/offline
+        // 8. Jika AI berhasil atau fallback jika error/offline
         val finalReply = if (aiReply.isNotBlank()) {
             aiReply
         } else {
             fallbackMsg
         }
 
-        // 8. Kirim balasan via RemoteInput (100% Native Background)
+        // 9. Kirim balasan via RemoteInput (100% Native Background)
         sendReply(context, replyAction, finalReply)
 
-        // 9. Simpan ke Riwayat Chat Log Lokal
+        // 10. Deteksi apakah pesan mengindikasikan klaim pembayaran / bukti transfer
+        val lowerMsg = customerMessage.lowercase()
+        val isPaymentNotice = lowerMsg.contains("sudah tf") ||
+            lowerMsg.contains("sudah transfer") ||
+            lowerMsg.contains("sudah bayar") ||
+            lowerMsg.contains("bukti transfer") ||
+            lowerMsg.contains("bukti tf") ||
+            lowerMsg.contains("lunas") ||
+            lowerMsg.contains("struk") ||
+            lowerMsg.contains("cek mutasi")
+
+        // 11. Simpan ke Riwayat Chat Log Lokal
         try {
             db.chatLogDao().insertChatLog(
                 com.mbakadmin.dagango.data.local.entity.ChatLogEntity(
                     senderName = senderName,
                     incomingMessage = customerMessage,
-                    aiReply = if (aiReply.isNotBlank()) finalReply else "[Fallback Offline] $finalReply"
+                    aiReply = if (aiReply.isNotBlank()) finalReply else "[Fallback Offline] $finalReply",
+                    isPaymentClaimed = isPaymentNotice,
+                    isVerifiedByHuman = false
                 )
             )
         } catch (e: Exception) {
@@ -289,48 +304,101 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         }
 
         val adminName = settings.adminName.ifBlank { "Mbak Admin" }
+        val shippingFeeText = "Rp${settings.defaultShippingFee.toInt()}"
+        val orderFormat = settings.orderFormatTemplate.ifBlank {
+            "Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:"
+        }
 
         return """
-            Kamu adalah '$adminName', asisten penjualan resmi toko '${settings.storeName}'.
+            Kamu adalah '$adminName', asisten penjualan toko '${settings.storeName}'.
             Gaya Bicara: ${settings.botTone}.
             
-            Informasi Pembayaran:
+            INFORMASI TOKO:
+            - Pengiriman: ${settings.shippingInfo}
+            - Estimasi Ongkos Kirim Standar: $shippingFeeText (dapat disesuaikan jika pembeli menyebutkan tujuan spesifik).
+            - Rekening Pembayaran:
             ${settings.paymentInfo}
-            
-            Informasi Pengiriman:
-            ${settings.shippingInfo}
             
             $productCatalog
             
-            Instruksi Wajib:
-            1. Selalu ramah, gunakan panggilan 'kak'.
-            2. Jawab pertanyaan seputar stok, harga, varian, ongkir, dan rekening pembayaran sesuai data di atas.
-            3. Jika stok habis atau tidak ada di katalog, katakan dengan sopan dan tawarkan produk alternatif yang mirip jika ada.
-            4. Balaslah seringkas dan sealami mungkin (1-3 kalimat) seperti admin WhatsApp sungguhan. Jangan bertele-tele dan hindari format Markdown tabel/bullet tebal yang kaku.
+            FORMAT PEMESANAN TOKO:
+            $orderFormat
+            
+            ATURAN ALUR PENJUALAN (SALES ORDER FUNNEL) - WAJIB DIIKUTI SECARA TERTIB TAHAP DEMI TAHAP:
+            
+            TAHAP 1: KONSULTASI & CEK STOK
+            - Jawab pertanyaan seputar ketersediaan stok, harga, varian, dan detail produk dengan ramah dan ringkas.
+            
+            TAHAP 2: PERMINTAAN FORMAT ORDER (DILARANG KIRIM NO REKENING SEKARANG!)
+            - KETIKA pembeli menyatakan ingin membeli/memesan (misal: "mau pesan", "ambil 2 pcs", "order ya kak", "pesan warna biru"):
+              JANGAN PERNAH mengirimkan nomor rekening atau meminta transfer sekarang!
+            - Mintalah pembeli untuk mengisi FORMAT PEMESANAN TOKO di atas secara lengkap beserta alamat pengirimannya terlebih dahulu.
+            
+            TAHAP 3: RINCIAN TOTAL + ONGKIR + NOMOR REKENING
+            - SETELAH pembeli mengirimkan format pesanan dan alamat:
+              1. Tuliskan ringkasan pesanan & alamat pembeli.
+              2. Hitung TOTAL PEMBAYARAN = (Harga Produk x Jumlah) + Ongkos Kirim ($shippingFeeText). Tuliskan rincian subtotal barang dan ongkirnya secara jelas.
+              3. Berikan nomor rekening / metode pembayaran toko.
+              4. Ingatkan pembeli untuk mengirimkan bukti transfer jika sudah melakukan pembayaran.
+            
+            TAHAP 4: VERIFIKASI PEMBAYARAN OLEH HUMAN (HUMAN VERIFICATION GATE)
+            - JIKA pembeli menyatakan sudah transfer/sudah bayar (misal: "sudah transfer", "sudah tf", "ini buktinya", "cek mutasi"):
+              JANGAN mengonfirmasi bahwa uang sudah otomatis lunas/selesai!
+            - Katakan dengan ramah bahwa konfirmasi/bukti pembayaran sudah diterima dan SEDANG DITERUSKAN UNTUK DICEK & DIVERIFIKASI SECARA MANUAL OLEH ADMIN TOKO.
+            - Beritahu bahwa pesanan akan segera diproses setelah verifikasi selesai.
+            
+            BATASAN FORMAT:
+            - Balaslah seringkas dan sealami mungkin (chat WhatsApp Indonesia yang hangat, bukan robot kaku).
         """.trimIndent()
     }
 
-    private fun callAiEngine(settings: StoreSettingsEntity, systemPrompt: String, userPrompt: String): String {
+    private fun callAiEngine(
+        settings: StoreSettingsEntity,
+        systemPrompt: String,
+        historyLogs: List<com.mbakadmin.dagango.data.local.entity.ChatLogEntity>,
+        customerMessage: String
+    ): String {
         // Jika API key belum diisi pengguna
         if (settings.aiApiKey.isBlank()) {
             return ""
         }
 
         try {
+            val messagesArray = JSONArray().apply {
+                // 1. System Prompt
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", systemPrompt)
+                })
+
+                // 2. Chat history (urutkan kronologis: terlama ke terbaru)
+                historyLogs.reversed().forEach { log ->
+                    if (log.incomingMessage.isNotBlank()) {
+                        put(JSONObject().apply {
+                            put("role", "user")
+                            put("content", log.incomingMessage)
+                        })
+                    }
+                    if (log.aiReply.isNotBlank() && !log.aiReply.startsWith("[Fallback")) {
+                        put(JSONObject().apply {
+                            put("role", "assistant")
+                            put("content", log.aiReply)
+                        })
+                    }
+                }
+
+                // 3. Current customer message
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", customerMessage)
+                })
+            }
+
             val payload = JSONObject().apply {
                 put("model", settings.aiModel.ifBlank { "gpt-4o-mini" })
-                put("messages", JSONArray().apply {
-                    put(JSONObject().apply {
-                        put("role", "system")
-                        put("content", systemPrompt)
-                    })
-                    put(JSONObject().apply {
-                        put("role", "user")
-                        put("content", userPrompt)
-                    })
-                })
+                put("messages", messagesArray)
                 put("temperature", 0.7)
-                put("max_tokens", 200)
+                put("max_tokens", 400)
                 put("stream", false)
             }
 

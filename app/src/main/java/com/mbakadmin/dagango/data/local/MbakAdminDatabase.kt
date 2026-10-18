@@ -15,7 +15,7 @@ import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 
 @Database(
     entities = [ProductEntity::class, StoreSettingsEntity::class, ChatLogEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class MbakAdminDatabase : RoomDatabase() {
@@ -92,6 +92,29 @@ abstract class MbakAdminDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migrasi aman dari Versi 4 ke Versi 5:
+         * Menambahkan defaultShippingFee, orderFormatTemplate, isPaymentClaimed, isVerifiedByHuman.
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE store_settings ADD COLUMN defaultShippingFee REAL NOT NULL DEFAULT 15000.0")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL(
+                        "ALTER TABLE store_settings ADD COLUMN orderFormatTemplate TEXT NOT NULL DEFAULT 'Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:'"
+                    )
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE chat_logs ADD COLUMN isPaymentClaimed INTEGER NOT NULL DEFAULT 0")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE chat_logs ADD COLUMN isVerifiedByHuman INTEGER NOT NULL DEFAULT 0")
+                } catch (_: Exception) {}
+            }
+        }
+
         fun getInstance(context: Context): MbakAdminDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -99,7 +122,7 @@ abstract class MbakAdminDatabase : RoomDatabase() {
                     MbakAdminDatabase::class.java,
                     "mbakadmin.db"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
                 INSTANCE = instance
                 instance
