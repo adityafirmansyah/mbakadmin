@@ -197,6 +197,10 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
             lowerMsg.contains("struk") ||
             lowerMsg.contains("cek mutasi")
 
+        // Ekstrak no HP / WhatsApp jika pembeli mengisi format pemesanan
+        val phoneRegex = Regex("""(08\d{8,12}|628\d{8,12}|\+628\d{8,12})""")
+        val extractedPhone = phoneRegex.find(customerMessage)?.value?.replace("+", "")?.trim() ?: ""
+
         // 11. Simpan ke Riwayat Chat Log Lokal
         try {
             db.chatLogDao().insertChatLog(
@@ -205,7 +209,9 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
                     incomingMessage = customerMessage,
                     aiReply = if (aiReply.isNotBlank()) finalReply else "[Fallback Offline] $finalReply",
                     isPaymentClaimed = isPaymentNotice,
-                    isVerifiedByHuman = false
+                    isVerifiedByHuman = false,
+                    customerPhone = extractedPhone,
+                    orderStatus = if (isPaymentNotice) "PENDING_VERIFICATION" else "PENDING"
                 )
             )
         } catch (e: Exception) {
