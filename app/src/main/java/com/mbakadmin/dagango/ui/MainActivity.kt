@@ -794,6 +794,7 @@ private fun testAiConnection(baseUrl: String, apiKey: String, model: String, tim
                 })
             })
             put("max_tokens", 10)
+            put("stream", false)
         }
 
         val requestBuilder = okhttp3.Request.Builder()
@@ -808,10 +809,12 @@ private fun testAiConnection(baseUrl: String, apiKey: String, model: String, tim
         client.newCall(requestBuilder.build()).execute().use { response ->
             if (response.isSuccessful) {
                 val body = response.body?.string() ?: ""
-                val json = org.json.JSONObject(body)
-                val choices = json.optJSONArray("choices")
-                val text = choices?.optJSONObject(0)?.optJSONObject("message")?.optString("content")?.trim() ?: "OK"
-                return Pair(true, "✅ Koneksi Berhasil! Respon ($model): \"$text\"")
+                val text = extractAiResponseContent(body)
+                if (text.isNotBlank()) {
+                    return Pair(true, "✅ Koneksi Berhasil! Respon ($model): \"$text\"")
+                } else {
+                    return Pair(false, "❌ Respon kosong dari model $model")
+                }
             } else {
                 val errBody = response.body?.string() ?: ""
                 return Pair(false, "❌ Gagal HTTP ${response.code}: $errBody")
@@ -820,4 +823,54 @@ private fun testAiConnection(baseUrl: String, apiKey: String, model: String, tim
     } catch (e: Exception) {
         return Pair(false, "❌ Error: ${e.javaClass.simpleName} - ${e.message}")
     }
+}
+
+private fun extractAiResponseContent(rawBody: String): String {
+    val body = rawBody.trim()
+    if (body.isBlank()) return ""
+
+    // 1. Coba parse standard JSON object
+    if (body.startsWith("{")) {
+        try {
+            val json = org.json.JSONObject(body)
+            val choices = json.optJSONArray("choices")
+            if (choices != null && choices.length() > 0) {
+                val choice = choices.getJSONObject(0)
+                val message = choice.optJSONObject("message")
+                val content = message?.optString("content")
+                if (!content.isNullOrBlank()) return content.trim()
+
+                val delta = choice.optJSONObject("delta")
+                val deltaContent = delta?.optString("content")
+                if (!deltaContent.isNullOrBlank()) return deltaContent.trim()
+            }
+        } catch (_: Exception) {}
+    }
+
+    // 2. Fallback parse SSE stream (data: {...}\n\ndata: {...})
+    if (body.contains("data:")) {
+        val contentBuilder = StringBuilder()
+        body.lines().forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("data:") && !trimmed.contains("[DONE]")) {
+                val jsonStr = trimmed.removePrefix("data:").trim()
+                try {
+                    val json = org.json.JSONObject(jsonStr)
+                    val choices = json.optJSONArray("choices")
+                    if (choices != null && choices.length() > 0) {
+                        val choice = choices.getJSONObject(0)
+                        val delta = choice.optJSONObject("delta")
+                        val part = delta?.optString("content")
+                        if (!part.isNullOrEmpty()) {
+                            contentBuilder.append(part)
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+        val sseResult = contentBuilder.toString().trim()
+        if (sseResult.isNotBlank()) return sseResult
+    }
+
+    return ""
 }
