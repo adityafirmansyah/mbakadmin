@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.mbakadmin.dagango.data.local.dao.ChatLogDao
 import com.mbakadmin.dagango.data.local.dao.ProductDao
 import com.mbakadmin.dagango.data.local.dao.StoreSettingsDao
@@ -25,13 +27,50 @@ abstract class MbakAdminDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: MbakAdminDatabase? = null
 
+        /**
+         * Migrasi aman dari Versi 1 ke Versi 2:
+         * Menambahkan kolom baru tanpa menghapus data produk, harga, varian, atau chat log pengguna.
+         */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Pastikan tabel chat_logs ada jika upgrade dari versi awal
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `chat_logs` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `senderName` TEXT NOT NULL,
+                        `incomingMessage` TEXT NOT NULL,
+                        `aiReply` TEXT NOT NULL,
+                        `timestamp` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+
+                // Cek kolom adminName sebelum menambah agar idempotent
+                try {
+                    db.execSQL("ALTER TABLE store_settings ADD COLUMN adminName TEXT NOT NULL DEFAULT 'Mbak Admin'")
+                } catch (_: Exception) {
+                    // Kolom sudah ada
+                }
+
+                // Cek kolom aiApiBaseUrl sebelum menambah agar idempotent
+                try {
+                    db.execSQL("ALTER TABLE store_settings ADD COLUMN aiApiBaseUrl TEXT NOT NULL DEFAULT 'https://api.openai.com/v1'")
+                } catch (_: Exception) {
+                    // Kolom sudah ada
+                }
+            }
+        }
+
         fun getInstance(context: Context): MbakAdminDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     MbakAdminDatabase::class.java,
                     "mbakadmin.db"
-                ).fallbackToDestructiveMigration()
+                )
+                // HAPUS fallbackToDestructiveMigration() untuk mencegah data UMKM terhapus saat update
+                .addMigrations(MIGRATION_1_2)
                 .build()
                 INSTANCE = instance
                 instance
