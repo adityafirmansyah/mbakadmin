@@ -221,7 +221,7 @@ fun MainScreen() {
                         }
                     },
                     onDirectSendWa = { phone, msg ->
-                        openWhatsAppMessage(context, phone, msg)
+                        openWhatsAppMessage(context, phone, msg, settings?.targetWhatsAppPackage ?: "ALL")
                     }
                 )
                 2 -> StoreSettingsTab(
@@ -287,7 +287,7 @@ fun MainScreen() {
                     if (sendWa) {
                         val adminName = settings?.adminName?.ifBlank { "Mbak Admin" } ?: "Mbak Admin"
                         val waMsg = "Halo kak ${log.senderName}! Pembayaran untuk pesanan kakak sudah diverifikasi lunas ya oleh $adminName. Pesanan sedang disiapkan untuk packing & pengiriman. Terima kasih banyak! 🙏"
-                        openWhatsAppMessage(context, log.customerPhone, waMsg)
+                        openWhatsAppMessage(context, log.customerPhone, waMsg, settings?.targetWhatsAppPackage ?: "ALL")
                     }
                 }
             }
@@ -307,7 +307,7 @@ fun MainScreen() {
                     if (sendWa) {
                         val adminName = settings?.adminName?.ifBlank { "Mbak Admin" } ?: "Mbak Admin"
                         val waMsg = "Halo kak ${log.senderName}! Pesanan kakak sudah dikirim oleh $adminName via $courier dengan nomor resi: $trackingNum. Bisa dicek berkala ya kak, terima kasih banyak! 🙏"
-                        openWhatsAppMessage(context, log.customerPhone, waMsg)
+                        openWhatsAppMessage(context, log.customerPhone, waMsg, settings?.targetWhatsAppPackage ?: "ALL")
                     }
                 }
             }
@@ -580,6 +580,8 @@ fun StoreSettingsTab(
     var paymentInfo by remember(currentSettings) { mutableStateOf(currentSettings.paymentInfo) }
     var shippingInfo by remember(currentSettings) { mutableStateOf(currentSettings.shippingInfo) }
     var defaultShippingFee by remember(currentSettings) { mutableStateOf(currentSettings.defaultShippingFee.toInt().toString()) }
+    var targetWhatsAppPackage by remember(currentSettings) { mutableStateOf(currentSettings.targetWhatsAppPackage) }
+    var onlyReplyUnknownContacts by remember(currentSettings) { mutableStateOf(currentSettings.onlyReplyUnknownContacts) }
 
     // Advanced Settings State (Collapsible)
     var showAdvancedSettings by remember { mutableStateOf(false) }
@@ -649,7 +651,61 @@ fun StoreSettingsTab(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // --- SECTION 3: PENGATURAN LANJUTAN (COLLAPSIBLE / ACCORDION) ---
+        // --- SECTION 3: TARGET WHATSAPP & PRIVASI KONTAK ---
+        Text("Target WhatsApp & Privasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Aplikasi WhatsApp Toko:", style = MaterialTheme.typography.labelMedium)
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = targetWhatsAppPackage == "ALL",
+                    onClick = { targetWhatsAppPackage = "ALL" },
+                    label = { Text("Semua WhatsApp") }
+                )
+                FilterChip(
+                    selected = targetWhatsAppPackage == "WHATSAPP_BUSINESS",
+                    onClick = { targetWhatsAppPackage = "WHATSAPP_BUSINESS" },
+                    label = { Text("WA Business Saja") }
+                )
+                FilterChip(
+                    selected = targetWhatsAppPackage == "WHATSAPP_STANDARD",
+                    onClick = { targetWhatsAppPackage = "WHATSAPP_STANDARD" },
+                    label = { Text("WA Standar Saja") }
+                )
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Hanya Balas Nomor Tidak Dikenal", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "Khusus 1 nomor WA: Hanya merespon calon pembeli baru (belum ada di kontak HP). Chat keluarga dan teman tidak akan dibalas bot.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Switch(
+                    checked = onlyReplyUnknownContacts,
+                    onCheckedChange = { onlyReplyUnknownContacts = it }
+                )
+            }
+        }
+
+        // --- SECTION 4: PENGATURAN LANJUTAN (COLLAPSIBLE / ACCORDION) ---
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -743,7 +799,9 @@ fun StoreSettingsTab(
                         },
                         aiApiBaseUrl = StoreSettingsEntity.DEFAULT_AI_BASE_URL,
                         aiApiKey = StoreSettingsEntity.DEFAULT_AI_API_KEY,
-                        aiModel = StoreSettingsEntity.DEFAULT_AI_MODEL
+                        aiModel = StoreSettingsEntity.DEFAULT_AI_MODEL,
+                        targetWhatsAppPackage = targetWhatsAppPackage,
+                        onlyReplyUnknownContacts = onlyReplyUnknownContacts
                     )
                 )
             },
@@ -951,7 +1009,7 @@ fun isNotificationServiceEnabled(context: Context): Boolean {
     return false
 }
 
-fun openWhatsAppMessage(context: Context, phone: String, message: String) {
+fun openWhatsAppMessage(context: Context, phone: String, message: String, targetPackage: String = "ALL") {
     try {
         val encoded = java.net.URLEncoder.encode(message, "UTF-8")
         val cleanPhone = phone.filter { it.isDigit() }
@@ -961,8 +1019,25 @@ fun openWhatsAppMessage(context: Context, phone: String, message: String) {
         } else {
             android.net.Uri.parse("https://api.whatsapp.com/send?text=$encoded")
         }
+
+        val targetPkg = when (targetPackage) {
+            "WHATSAPP_BUSINESS" -> "com.whatsapp.w4b"
+            "WHATSAPP_STANDARD" -> "com.whatsapp"
+            else -> {
+                // Jika terinstall WA Business, prioritaskan WA Business untuk toko
+                val pm = context.packageManager
+                val isW4bInstalled = try {
+                    pm.getPackageInfo("com.whatsapp.w4b", 0)
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+                if (isW4bInstalled) "com.whatsapp.w4b" else "com.whatsapp"
+            }
+        }
+
         val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-            setPackage("com.whatsapp")
+            setPackage(targetPkg)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
