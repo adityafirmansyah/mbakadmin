@@ -1,29 +1,23 @@
 package com.mbakadmin.dagango.service
 
 import android.app.Notification
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.core.app.RemoteInput
 import com.mbakadmin.dagango.data.local.MbakAdminDatabase
-import com.mbakadmin.dagango.data.local.entity.ProductEntity
+import com.mbakadmin.dagango.data.local.entity.ChatLogEntity
 import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
+import com.mbakadmin.dagango.service.ai.AiReplyEngine
+import com.mbakadmin.dagango.service.ai.PromptBuilder
+import com.mbakadmin.dagango.service.notification.WhatsAppReplyDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
-import org.json.JSONObject
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -35,6 +29,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(25, TimeUnit.SECONDS)
         .build()
+    private val aiReplyEngine = AiReplyEngine(httpClient)
 
     // Cache untuk mencegah membalas pesan yang sama dalam jendela 20 detik (berbasis Sender + Teks)
     private val processedMessageCache = ConcurrentHashMap<String, Long>()
@@ -157,7 +152,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         processedMessageCache[messageHash] = now
 
         // 5. Ekstrak Action Reply & RemoteInput dari Notifikasi
-        val replyAction = extractReplyAction(notification)
+        val replyAction = WhatsAppReplyDispatcher.extractReplyAction(notification)
         if (replyAction == null) {
             inFlightMessages.remove(messageHash)
             return
@@ -209,7 +204,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         }
 
         // 2. FILTER PRIVASI KONTAK (Hanya Balas Nomor Tidak Dikenal / Luar Kontak)
-        if (settings.onlyReplyUnknownContacts && !isUnknownPhoneNumber(senderName)) {
+        if (settings.onlyReplyUnknownContacts && !WhatsAppReplyDispatcher.isUnknownPhoneNumber(senderName)) {
             Log.d(TAG, "Abaikan pesan dari '$senderName': Pengaturan aktif untuk HANYA membalas nomor baru/luar kontak.")
             return
         }
@@ -220,7 +215,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         val historyLogs = db.chatLogDao().getRecentMessagesForSender(senderName, limit = 6)
 
         // 6. Susun Konteks Toko & Prompt untuk AI
-        val systemPrompt = buildSystemPrompt(settings, products)
+        val systemPrompt = PromptBuilder.buildSystemPrompt(settings, products)
 
         val adminName = settings.adminName.ifBlank { "Mbak Admin" }
         val fallbackTemplate = settings.fallbackReplyMessage.ifBlank {
@@ -236,7 +231,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         }
 
         // 7. Request ke AI Engine dengan konteks riwayat percakapan
-        val aiReply = callAiEngine(settings, systemPrompt, historyLogs, promptForAi)
+        val aiReply = aiReplyEngine.callAiEngine(settings, systemPrompt, historyLogs, promptForAi)
 
         // 8. Jika AI berhasil atau fallback jika error/offline
         val finalReply = if (aiReply.isNotBlank()) {
@@ -246,7 +241,14 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         }
 
         // 9. Kirim balasan via RemoteInput (100% Native Background)
-        sendReply(context, replyAction, finalReply)
+        WhatsAppReplyDispatcher.sendReply(context, replyAction, finalReply) {
+            val cleanReply = finalReply.trim()
+            recentSentReplies[cleanReply] = System.currentTimeMillis()
+
+            // Bersihkan entri lama di recentSentReplies (> 60 detik)
+            val cutoff = System.currentTimeMillis() - 60_000
+            recentSentReplies.entries.removeIf { it.value < cutoff }
+        }
 
         // 10. Deteksi apakah pesan mengindikasikan klaim pembayaran / bukti transfer
         val lowerMsg = customerMessage.lowercase()
@@ -267,7 +269,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         // 11. Simpan ke Riwayat Chat Log Lokal
         try {
             db.chatLogDao().insertChatLog(
-                com.mbakadmin.dagango.data.local.entity.ChatLogEntity(
+                ChatLogEntity(
                     senderName = senderName,
                     incomingMessage = customerMessage,
                     aiReply = if (aiReply.isNotBlank()) finalReply else "[Fallback Offline] $finalReply",
@@ -280,304 +282,6 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         } catch (e: Exception) {
             Log.e(TAG, "Gagal menyimpan chat log: ${e.message}")
         }
-    }
-
-    /**
-     * Memeriksa apakah pengirim pesan WhatsApp merupakan nomor telepon baru/tidak dikenal.
-     * Di WhatsApp, nomor yang BELUM disimpan di kontak HP akan tampil sebagai nomor telepon (misal: +62 812-xxx atau 0812xxx),
-     * sedangkan nomor yang SUDAH disimpan di kontak HP akan tampil sebagai nama kontak (misal: "Budi", "Mamah", "Istri").
-     */
-    private fun isUnknownPhoneNumber(sender: String): Boolean {
-        val trimmed = sender.trim()
-        if (trimmed.isBlank()) return false
-        val startsWithPhone = trimmed.startsWith("+") || trimmed.startsWith("08") || trimmed.startsWith("62")
-        val digitCount = trimmed.count { it.isDigit() }
-        val nonPhoneChars = trimmed.count { !it.isDigit() && it != '+' && it != '-' && it != ' ' && it != '(' && it != ')' }
-        return (startsWithPhone && digitCount >= 8 && nonPhoneChars == 0) || (digitCount >= 9 && nonPhoneChars <= 1)
-    }
-
-    private fun extractReplyAction(notification: Notification): NotificationCompat.Action? {
-        // 1. Coba dari direct notification actions
-        val actionsCount = NotificationCompat.getActionCount(notification)
-        for (i in 0 until actionsCount) {
-            val action = NotificationCompat.getAction(notification, i)
-            if (action != null && hasRemoteInput(action)) {
-                return action
-            }
-        }
-
-        // 2. Coba dari WearableExtender actions (WhatsApp sering menaruh remote input di sini)
-        val wearableExtender = NotificationCompat.WearableExtender(notification)
-        for (action in wearableExtender.actions) {
-            if (hasRemoteInput(action)) return action
-        }
-
-        // 3. Fallback: Cek actions dari standard notification.actions (Android framework)
-        notification.actions?.forEach { frameworkAction ->
-            frameworkAction.remoteInputs?.let { remoteInputs ->
-                if (remoteInputs.isNotEmpty() && frameworkAction.actionIntent != null) {
-                    val compatBuilder = NotificationCompat.Action.Builder(
-                        frameworkAction.icon,
-                        frameworkAction.title,
-                        frameworkAction.actionIntent
-                    )
-                    remoteInputs.forEach { ri ->
-                        compatBuilder.addRemoteInput(
-                            RemoteInput.Builder(ri.resultKey)
-                                .setLabel(ri.label)
-                                .setChoices(ri.choices)
-                                .setAllowFreeFormInput(ri.allowFreeFormInput)
-                                .addExtras(ri.extras)
-                                .build()
-                        )
-                    }
-                    return compatBuilder.build()
-                }
-            }
-        }
-
-        return null
-    }
-
-    private fun hasRemoteInput(action: NotificationCompat.Action): Boolean {
-        return action.remoteInputs?.any { it.allowFreeFormInput } == true
-    }
-
-    private fun sendReply(context: Context, action: NotificationCompat.Action, replyText: String) {
-        val remoteInputs = action.remoteInputs ?: return
-        val pendingIntent = action.actionIntent ?: return
-        val intent = Intent()
-        val bundle = Bundle()
-
-        remoteInputs.forEach { remoteInput ->
-            bundle.putCharSequence(remoteInput.resultKey, replyText)
-        }
-
-        RemoteInput.addResultsToIntent(remoteInputs, intent, bundle)
-        try {
-            pendingIntent.send(context, 0, intent)
-            Log.d(TAG, "MbakAdmin sukses mengirim balasan otomatis: $replyText")
-
-            // Catat teks yang dikirim agar jika WhatsApp memantulkan pesan ini di notifikasi, tidak dibalas lagi
-            val cleanReply = replyText.trim()
-            recentSentReplies[cleanReply] = System.currentTimeMillis()
-
-            // Bersihkan entri lama di recentSentReplies (> 60 detik)
-            val cutoff = System.currentTimeMillis() - 60_000
-            recentSentReplies.entries.removeIf { it.value < cutoff }
-        } catch (e: PendingIntent.CanceledException) {
-            Log.e(TAG, "Gagal mengirim PendingIntent: ${e.message}")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saat eksekusi reply PendingIntent: ${e.message}")
-        }
-    }
-
-    private fun buildSystemPrompt(settings: StoreSettingsEntity, products: List<ProductEntity>): String {
-        val productCatalog = StringBuilder()
-        if (products.isEmpty()) {
-            productCatalog.append("Katalog: (Belum ada data produk tersimpan, minta pembeli menunggu admin manual jika tanya produk khusus)")
-        } else {
-            productCatalog.append("Katalog Produk Aktif:\n")
-            products.forEach { p ->
-                productCatalog.append("- ${p.name} | Rp${p.price.toInt()} | Stok: ${p.stock}")
-                if (p.variants.isNotBlank()) productCatalog.append(" | Varian: ${p.variants}")
-                if (p.description.isNotBlank()) productCatalog.append(" | Deskripsi: ${p.description}")
-                productCatalog.append("\n")
-            }
-        }
-
-        val adminName = settings.adminName.ifBlank { "Mbak Admin" }
-        val shippingFeeText = "Rp${settings.defaultShippingFee.toInt()}"
-        val orderFormat = settings.orderFormatTemplate.ifBlank {
-            "Nama Penerima:\nNo. HP/WA:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:\nKecamatan & Kota:\nKode Pos:"
-        }
-
-        return """
-            Kamu adalah '$adminName', asisten penjualan toko '${settings.storeName}'.
-            Gaya Bicara: ${settings.botTone}.
-            
-            INFORMASI TOKO:
-            - Pengiriman: ${settings.shippingInfo}
-            - Estimasi Ongkos Kirim Standar: $shippingFeeText (dapat disesuaikan jika pembeli menyebutkan tujuan spesifik).
-            - Rekening Pembayaran:
-            ${settings.paymentInfo}
-            
-            $productCatalog
-            
-            FORMAT PEMESANAN TOKO:
-            $orderFormat
-            
-            ATURAN ALUR PENJUALAN (SALES ORDER FUNNEL) - WAJIB DIIKUTI SECARA TERTIB TAHAP DEMI TAHAP:
-            
-            TAHAP 1: KONSULTASI & CEK STOK
-            - Jawab pertanyaan seputar ketersediaan stok, harga, varian, dan detail produk dengan ramah dan ringkas.
-            
-            TAHAP 2: PERMINTAAN FORMAT ORDER (DILARANG KIRIM NO REKENING SEKARANG!)
-            - KETIKA pembeli menyatakan ingin membeli/memesan (misal: "mau pesan", "ambil 2 pcs", "order ya kak", "pesan warna biru"):
-              JANGAN PERNAH mengirimkan nomor rekening atau meminta transfer sekarang!
-            - Mintalah pembeli untuk mengisi FORMAT PEMESANAN TOKO di atas secara lengkap beserta alamat pengirimannya terlebih dahulu.
-            
-            TAHAP 3: RINCIAN TOTAL + ONGKIR + NOMOR REKENING
-            - SETELAH pembeli mengirimkan format pesanan dan alamat:
-              1. Tuliskan ringkasan pesanan & alamat pembeli.
-              2. Hitung TOTAL PEMBAYARAN = (Harga Produk x Jumlah) + Ongkos Kirim ($shippingFeeText). Tuliskan rincian subtotal barang dan ongkirnya secara jelas.
-              3. Berikan nomor rekening / metode pembayaran toko.
-              4. Ingatkan pembeli untuk mengirimkan bukti transfer jika sudah melakukan pembayaran.
-            
-            TAHAP 4: VERIFIKASI PEMBAYARAN OLEH HUMAN (HUMAN VERIFICATION GATE)
-            - JIKA pembeli menyatakan sudah transfer/sudah bayar (misal: "sudah transfer", "sudah tf", "sudah bayar", "lunas", "cek mutasi"):
-              1. JANGAN PERNAH mengonfirmasi bahwa uang sudah otomatis lunas/selesai!
-              2. PERHATIKAN CATATAN SISTEM TENTANG FOTO/STRUK BUKTI TRANSFER:
-                 - JIKA CATATAN SISTEM MENYATAKAN PEMBELI MELAMPIRKAN FOTO/GAMBAR BUKTI:
-                   Katakan terima kasih, foto bukti pembayarannya sudah diterima dan sedang diteruskan untuk dicek & diverifikasi manual oleh admin toko/finance.
-                 - JIKA CATATAN SISTEM MENYATAKAN TIDAK ADA FOTO (HANYA TEKS BIASA):
-                   DILARANG KERAS mengatakan "bukti transfer sudah diterima"! Katakan bahwa konfirmasi pembayarannya sudah dicatat dan sedang dicek mutasi oleh admin toko, lalu mintalah dengan sopan agar pembeli mengirimkan foto/screenshot bukti transfernya agar verifikasi bisa lebih cepat diproses.
-              3. Beritahu bahwa pesanan akan segera diproses setelah verifikasi selesai.
-            
-            BATASAN FORMAT:
-            - Balaslah seringkas dan sealami mungkin (chat WhatsApp Indonesia yang hangat, bukan robot kaku).
-        """.trimIndent()
-    }
-
-    private fun callAiEngine(
-        settings: StoreSettingsEntity,
-        systemPrompt: String,
-        historyLogs: List<com.mbakadmin.dagango.data.local.entity.ChatLogEntity>,
-        customerMessage: String
-    ): String {
-        val apiKey = settings.aiApiKey.ifBlank { StoreSettingsEntity.DEFAULT_AI_API_KEY }
-        val baseUrl = settings.aiApiBaseUrl.ifBlank { StoreSettingsEntity.DEFAULT_AI_BASE_URL }.trim()
-        val model = settings.aiModel.ifBlank { StoreSettingsEntity.DEFAULT_AI_MODEL }
-
-        // Jika API key tetap kosong
-        if (apiKey.isBlank()) {
-            return ""
-        }
-
-        try {
-            val messagesArray = JSONArray().apply {
-                // 1. System Prompt
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", systemPrompt)
-                })
-
-                // 2. Chat history (urutkan kronologis: terlama ke terbaru)
-                historyLogs.reversed().forEach { log ->
-                    if (log.incomingMessage.isNotBlank()) {
-                        put(JSONObject().apply {
-                            put("role", "user")
-                            put("content", log.incomingMessage)
-                        })
-                    }
-                    if (log.aiReply.isNotBlank() && !log.aiReply.startsWith("[Fallback")) {
-                        put(JSONObject().apply {
-                            put("role", "assistant")
-                            put("content", log.aiReply)
-                        })
-                    }
-                }
-
-                // 3. Current customer message
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", customerMessage)
-                })
-            }
-
-            val payload = JSONObject().apply {
-                put("model", model)
-                put("messages", messagesArray)
-                put("temperature", 0.7)
-                put("max_tokens", 400)
-                put("stream", false)
-            }
-
-            // Normalisasi URL endpoint: pastikan mengarah ke /chat/completions
-            val endpoint = if (baseUrl.endsWith("/chat/completions")) {
-                baseUrl
-            } else {
-                "${baseUrl.trimEnd('/')}/chat/completions"
-            }
-
-            val request = Request.Builder()
-                .url(endpoint)
-                .addHeader("Authorization", "Bearer $apiKey")
-                .addHeader("Content-Type", "application/json")
-                .post(payload.toString().toRequestBody("application/json".toMediaType()))
-                .build()
-
-            // Timeout dinamis berbasis konfigurasi toko (default 60s, batas 15s - 180s)
-            val timeoutSec = settings.aiTimeoutSeconds.toLong().coerceIn(15L, 180L)
-            val client = httpClient.newBuilder()
-                .connectTimeout(20, TimeUnit.SECONDS)
-                .readTimeout(timeoutSec, TimeUnit.SECONDS)
-                .writeTimeout(20, TimeUnit.SECONDS)
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val errBody = response.body?.string() ?: ""
-                    Log.e(TAG, "Request AI gagal code: ${response.code}, body: $errBody")
-                    return ""
-                }
-                val body = response.body?.string() ?: return ""
-                return parseAiResponseContent(body)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Gagal request AI: ${e.message}")
-        }
-        return ""
-    }
-
-    private fun parseAiResponseContent(rawBody: String): String {
-        val body = rawBody.trim()
-        if (body.isBlank()) return ""
-
-        // 1. Coba parse sebagai standard JSON response
-        if (body.startsWith("{")) {
-            try {
-                val json = JSONObject(body)
-                val choices = json.optJSONArray("choices")
-                if (choices != null && choices.length() > 0) {
-                    val choice = choices.getJSONObject(0)
-                    val message = choice.optJSONObject("message")
-                    val content = message?.optString("content")
-                    if (!content.isNullOrBlank()) return content.trim()
-
-                    val delta = choice.optJSONObject("delta")
-                    val deltaContent = delta?.optString("content")
-                    if (!deltaContent.isNullOrBlank()) return deltaContent.trim()
-                }
-            } catch (_: Exception) {}
-        }
-
-        // 2. Fallback parse SSE stream (data: {...}\n\ndata: {...}) jika gateway mengirim stream
-        if (body.contains("data:")) {
-            val contentBuilder = StringBuilder()
-            body.lines().forEach { line ->
-                val trimmed = line.trim()
-                if (trimmed.startsWith("data:") && !trimmed.contains("[DONE]")) {
-                    val jsonStr = trimmed.removePrefix("data:").trim()
-                    try {
-                        val json = JSONObject(jsonStr)
-                        val choices = json.optJSONArray("choices")
-                        if (choices != null && choices.length() > 0) {
-                            val choice = choices.getJSONObject(0)
-                            val delta = choice.optJSONObject("delta")
-                            val part = delta?.optString("content")
-                            if (!part.isNullOrEmpty()) {
-                                contentBuilder.append(part)
-                            }
-                        }
-                    } catch (_: Exception) {}
-                }
-            }
-            val sseResult = contentBuilder.toString().trim()
-            if (sseResult.isNotBlank()) return sseResult
-        }
-
-        return ""
     }
 
     companion object {
