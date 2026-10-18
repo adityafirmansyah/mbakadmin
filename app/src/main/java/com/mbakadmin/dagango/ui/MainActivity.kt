@@ -30,7 +30,10 @@ import com.mbakadmin.dagango.data.local.entity.ProductEntity
 import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 import com.mbakadmin.dagango.service.MbakAdminGuardianService
 import com.mbakadmin.dagango.util.BatteryOptimizationHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -378,6 +381,7 @@ fun StoreSettingsTab(
     onSaveSettings: (StoreSettingsEntity) -> Unit,
     onToggleAutoReply: (Boolean) -> Unit = {}
 ) {
+    val scope = rememberCoroutineScope()
     var storeName by remember(currentSettings) { mutableStateOf(currentSettings.storeName) }
     var adminName by remember(currentSettings) { mutableStateOf(currentSettings.adminName) }
     var paymentInfo by remember(currentSettings) { mutableStateOf(currentSettings.paymentInfo) }
@@ -458,7 +462,7 @@ fun StoreSettingsTab(
             value = aiApiBaseUrl,
             onValueChange = { aiApiBaseUrl = it },
             label = { Text("API Base URL (OpenAI / OpenRouter / 9Router / Custom)") },
-            placeholder = { Text("https://api.openai.com/v1") },
+            placeholder = { Text("http://192.168.18.100:20128/v1") },
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
@@ -474,6 +478,54 @@ fun StoreSettingsTab(
             label = { Text("Model AI (Default: gpt-4o-mini)") },
             modifier = Modifier.fillMaxWidth()
         )
+
+        var isTestingAi by remember { mutableStateOf(false) }
+        var testResultMsg by remember { mutableStateOf<String?>(null) }
+        var isTestSuccess by remember { mutableStateOf(false) }
+
+        OutlinedButton(
+            onClick = {
+                isTestingAi = true
+                testResultMsg = null
+                scope.launch(Dispatchers.IO) {
+                    val result = testAiConnection(
+                        baseUrl = aiApiBaseUrl.ifBlank { "https://api.openai.com/v1" },
+                        apiKey = aiApiKey,
+                        model = aiModel.ifBlank { "gpt-4o-mini" }
+                    )
+                    isTestingAi = false
+                    isTestSuccess = result.first
+                    testResultMsg = result.second
+                }
+            },
+            enabled = !isTestingAi,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (isTestingAi) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Menghubungkan ke AI...")
+            } else {
+                Icon(Icons.Default.Speed, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Test Koneksi AI")
+            }
+        }
+
+        testResultMsg?.let { msg ->
+            Surface(
+                color = if (isTestSuccess) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = msg,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isTestSuccess) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
+        }
 
         Button(
             onClick = {
@@ -693,4 +745,54 @@ fun isNotificationServiceEnabled(context: Context): Boolean {
         }
     }
     return false
+}
+
+private fun testAiConnection(baseUrl: String, apiKey: String, model: String): Pair<Boolean, String> {
+    try {
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+
+        val endpoint = if (baseUrl.endsWith("/chat/completions")) {
+            baseUrl
+        } else {
+            "${baseUrl.trimEnd('/')}/chat/completions"
+        }
+
+        val payload = org.json.JSONObject().apply {
+            put("model", model)
+            put("messages", org.json.JSONArray().apply {
+                put(org.json.JSONObject().apply {
+                    put("role", "user")
+                    put("content", "ping")
+                })
+            })
+            put("max_tokens", 10)
+        }
+
+        val requestBuilder = okhttp3.Request.Builder()
+            .url(endpoint)
+            .addHeader("Content-Type", "application/json")
+            .post(payload.toString().toRequestBody("application/json".toMediaType()))
+
+        if (apiKey.isNotBlank()) {
+            requestBuilder.addHeader("Authorization", "Bearer $apiKey")
+        }
+
+        client.newCall(requestBuilder.build()).execute().use { response ->
+            if (response.isSuccessful) {
+                val body = response.body?.string() ?: ""
+                val json = org.json.JSONObject(body)
+                val choices = json.optJSONArray("choices")
+                val text = choices?.optJSONObject(0)?.optJSONObject("message")?.optString("content")?.trim() ?: "OK"
+                return Pair(true, "✅ Koneksi Berhasil! Respon ($model): \"$text\"")
+            } else {
+                val errBody = response.body?.string() ?: ""
+                return Pair(false, "❌ Gagal HTTP ${response.code}: $errBody")
+            }
+        }
+    } catch (e: Exception) {
+        return Pair(false, "❌ Error: ${e.javaClass.simpleName} - ${e.message}")
+    }
 }

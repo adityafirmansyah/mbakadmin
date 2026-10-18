@@ -115,25 +115,32 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         val systemPrompt = buildSystemPrompt(settings, products)
         val userPrompt = "Pembeli ($senderName): \"$customerMessage\"\nBalaslah sebagai Mbak Admin toko dengan format singkat, ramah, dan solutif."
 
+        val adminName = settings.adminName.ifBlank { "Mbak Admin" }
+
         // 6. Request ke AI Engine
         val aiReply = callAiEngine(settings, systemPrompt, userPrompt)
 
-        if (aiReply.isNotBlank()) {
-            // 7. Kirim balasan via RemoteInput (100% Native Background)
-            sendReply(context, replyAction, aiReply)
+        // 7. Jika AI berhasil atau fallback jika error/offline
+        val finalReply = if (aiReply.isNotBlank()) {
+            aiReply
+        } else {
+            "Halo kak! Pesan sudah $adminName terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"
+        }
 
-            // 8. Simpan ke Riwayat Chat Log Lokal
-            try {
-                db.chatLogDao().insertChatLog(
-                    com.mbakadmin.dagango.data.local.entity.ChatLogEntity(
-                        senderName = senderName,
-                        incomingMessage = customerMessage,
-                        aiReply = aiReply
-                    )
+        // 8. Kirim balasan via RemoteInput (100% Native Background)
+        sendReply(context, replyAction, finalReply)
+
+        // 9. Simpan ke Riwayat Chat Log Lokal
+        try {
+            db.chatLogDao().insertChatLog(
+                com.mbakadmin.dagango.data.local.entity.ChatLogEntity(
+                    senderName = senderName,
+                    incomingMessage = customerMessage,
+                    aiReply = if (aiReply.isNotBlank()) finalReply else "[Fallback Offline] $finalReply"
                 )
-            } catch (e: Exception) {
-                Log.e(TAG, "Gagal menyimpan chat log: ${e.message}")
-            }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Gagal menyimpan chat log: ${e.message}")
         }
     }
 
