@@ -30,7 +30,10 @@ import com.mbakadmin.dagango.data.local.entity.ProductEntity
 import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 import com.mbakadmin.dagango.service.MbakAdminGuardianService
 import com.mbakadmin.dagango.util.BatteryOptimizationHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -378,6 +381,7 @@ fun StoreSettingsTab(
     onSaveSettings: (StoreSettingsEntity) -> Unit,
     onToggleAutoReply: (Boolean) -> Unit = {}
 ) {
+    val scope = rememberCoroutineScope()
     var storeName by remember(currentSettings) { mutableStateOf(currentSettings.storeName) }
     var adminName by remember(currentSettings) { mutableStateOf(currentSettings.adminName) }
     var paymentInfo by remember(currentSettings) { mutableStateOf(currentSettings.paymentInfo) }
@@ -770,7 +774,7 @@ private fun testAiConnection(baseUrl: String, apiKey: String, model: String): Pa
         val requestBuilder = okhttp3.Request.Builder()
             .url(endpoint)
             .addHeader("Content-Type", "application/json")
-            .post(okhttp3.RequestBody.create(okhttp3.MediaType.parse("application/json"), payload.toString()))
+            .post(payload.toString().toRequestBody("application/json".toMediaType()))
 
         if (apiKey.isNotBlank()) {
             requestBuilder.addHeader("Authorization", "Bearer $apiKey")
@@ -778,13 +782,13 @@ private fun testAiConnection(baseUrl: String, apiKey: String, model: String): Pa
 
         client.newCall(requestBuilder.build()).execute().use { response ->
             if (response.isSuccessful) {
-                val body = response.body()?.string() ?: ""
+                val body = response.body?.string() ?: ""
                 val json = org.json.JSONObject(body)
                 val choices = json.optJSONArray("choices")
                 val text = choices?.optJSONObject(0)?.optJSONObject("message")?.optString("content")?.trim() ?: "OK"
                 return Pair(true, "✅ Koneksi Berhasil! Respon ($model): \"$text\"")
             } else {
-                val errBody = response.body()?.string() ?: ""
+                val errBody = response.body?.string() ?: ""
                 return Pair(false, "❌ Gagal HTTP ${response.code}: $errBody")
             }
         }
