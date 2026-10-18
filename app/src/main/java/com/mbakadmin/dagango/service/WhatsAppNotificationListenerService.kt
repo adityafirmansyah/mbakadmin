@@ -67,6 +67,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
 
         var senderName = "Kak"
         var incomingText = ""
+        var hasAttachment = false
 
         if (messagingStyle != null && messagingStyle.messages.isNotEmpty()) {
             val latestMessage = messagingStyle.messages.last()
@@ -79,12 +80,46 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
 
             incomingText = latestMessage.text?.toString() ?: ""
             senderName = latestMessage.person?.name?.toString() ?: "Kak"
+
+            if (latestMessage.dataMimeType?.startsWith("image/") == true || latestMessage.dataUri != null) {
+                hasAttachment = true
+            }
         } else {
             // Fallback ke extras standar jika format non-messaging style
             val extras = notification.extras
             incomingText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
                 ?: extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
             senderName = extras.getString(Notification.EXTRA_TITLE) ?: "Kak"
+
+            if (extras != null && (extras.containsKey(Notification.EXTRA_PICTURE) || extras.containsKey("android.picture"))) {
+                hasAttachment = true
+            }
+        }
+
+        // Cek attachment dari extras jika belum terdeteksi
+        if (!hasAttachment) {
+            val extras = notification.extras
+            if (extras != null && (extras.containsKey(Notification.EXTRA_PICTURE) || extras.containsKey("android.picture"))) {
+                hasAttachment = true
+            }
+        }
+
+        // Cek teks notifikasi WhatsApp standar jika memuat indikator media
+        if (!hasAttachment) {
+            val lowerText = incomingText.lowercase()
+            if (incomingText.contains("📷") ||
+                lowerText.startsWith("foto") ||
+                lowerText.startsWith("photo") ||
+                lowerText.contains("📷 foto") ||
+                lowerText.contains("📷 photo")
+            ) {
+                hasAttachment = true
+            }
+        }
+
+        // Jika pembeli mengirim gambar murni tanpa caption, jangan abaikan notifikasi
+        if (incomingText.isBlank() && hasAttachment) {
+            incomingText = "📷 [Mengirim Foto Bukti / Gambar]"
         }
 
         if (incomingText.isBlank()) return
@@ -135,7 +170,9 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
                     context = applicationContext,
                     senderName = senderName,
                     customerMessage = incomingText,
-                    replyAction = replyAction
+                    replyAction = replyAction,
+                    pkg = pkg,
+                    hasAttachment = hasAttachment
                 )
             } finally {
                 // Beri jeda 30 detik sebelum melepas lock agar bounce update notifikasi selesai
@@ -149,13 +186,31 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         context: Context,
         senderName: String,
         customerMessage: String,
-        replyAction: NotificationCompat.Action
+        replyAction: NotificationCompat.Action,
+        pkg: String,
+        hasAttachment: Boolean
     ) {
         val db = MbakAdminDatabase.getInstance(context)
         val settings = db.storeSettingsDao().getSettings() ?: StoreSettingsEntity()
 
         if (!settings.isAutoReplyActive) {
             Log.d(TAG, "MbakAdmin auto-reply dinonaktifkan di pengaturan.")
+            return
+        }
+
+        // 1. FILTER TARGET WHATSAPP (Standar vs Business)
+        if (settings.targetWhatsAppPackage == "WHATSAPP_BUSINESS" && pkg != "com.whatsapp.w4b") {
+            Log.d(TAG, "Abaikan pesan: Pengaturan toko disetel khusus WhatsApp Business ($pkg diabaikan).")
+            return
+        }
+        if (settings.targetWhatsAppPackage == "WHATSAPP_STANDARD" && pkg != "com.whatsapp") {
+            Log.d(TAG, "Abaikan pesan: Pengaturan toko disetel khusus WhatsApp Standar ($pkg diabaikan).")
+            return
+        }
+
+        // 2. FILTER PRIVASI KONTAK (Hanya Balas Nomor Tidak Dikenal / Luar Kontak)
+        if (settings.onlyReplyUnknownContacts && !isUnknownPhoneNumber(senderName)) {
+            Log.d(TAG, "Abaikan pesan dari '$senderName': Pengaturan aktif untuk HANYA membalas nomor baru/luar kontak.")
             return
         }
 
@@ -173,8 +228,15 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         }
         val fallbackMsg = fallbackTemplate.replace("{admin}", adminName)
 
+        // Sisipkan informasi status lampiran media ke pesan pelanggan untuk AI
+        val promptForAi = if (hasAttachment) {
+            "$customerMessage\n[Catatan Sistem: Pembeli MELAMPIRKAN foto/gambar/struk bukti]"
+        } else {
+            "$customerMessage\n[Catatan Sistem: Pembeli HANYA mengirim pesan teks, TIDAK melampirkan foto/gambar/struk bukti]"
+        }
+
         // 7. Request ke AI Engine dengan konteks riwayat percakapan
-        val aiReply = callAiEngine(settings, systemPrompt, historyLogs, customerMessage)
+        val aiReply = callAiEngine(settings, systemPrompt, historyLogs, promptForAi)
 
         // 8. Jika AI berhasil atau fallback jika error/offline
         val finalReply = if (aiReply.isNotBlank()) {
@@ -188,7 +250,8 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
 
         // 10. Deteksi apakah pesan mengindikasikan klaim pembayaran / bukti transfer
         val lowerMsg = customerMessage.lowercase()
-        val isPaymentNotice = lowerMsg.contains("sudah tf") ||
+        val isPaymentNotice = hasAttachment ||
+            lowerMsg.contains("sudah tf") ||
             lowerMsg.contains("sudah transfer") ||
             lowerMsg.contains("sudah bayar") ||
             lowerMsg.contains("bukti transfer") ||
@@ -217,6 +280,20 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         } catch (e: Exception) {
             Log.e(TAG, "Gagal menyimpan chat log: ${e.message}")
         }
+    }
+
+    /**
+     * Memeriksa apakah pengirim pesan WhatsApp merupakan nomor telepon baru/tidak dikenal.
+     * Di WhatsApp, nomor yang BELUM disimpan di kontak HP akan tampil sebagai nomor telepon (misal: +62 812-xxx atau 0812xxx),
+     * sedangkan nomor yang SUDAH disimpan di kontak HP akan tampil sebagai nama kontak (misal: "Budi", "Mamah", "Istri").
+     */
+    private fun isUnknownPhoneNumber(sender: String): Boolean {
+        val trimmed = sender.trim()
+        if (trimmed.isBlank()) return false
+        val startsWithPhone = trimmed.startsWith("+") || trimmed.startsWith("08") || trimmed.startsWith("62")
+        val digitCount = trimmed.count { it.isDigit() }
+        val nonPhoneChars = trimmed.count { !it.isDigit() && it != '+' && it != '-' && it != ' ' && it != '(' && it != ')' }
+        return (startsWithPhone && digitCount >= 8 && nonPhoneChars == 0) || (digitCount >= 9 && nonPhoneChars <= 1)
     }
 
     private fun extractReplyAction(notification: Notification): NotificationCompat.Action? {
@@ -348,10 +425,14 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
               4. Ingatkan pembeli untuk mengirimkan bukti transfer jika sudah melakukan pembayaran.
             
             TAHAP 4: VERIFIKASI PEMBAYARAN OLEH HUMAN (HUMAN VERIFICATION GATE)
-            - JIKA pembeli menyatakan sudah transfer/sudah bayar (misal: "sudah transfer", "sudah tf", "ini buktinya", "cek mutasi"):
-              JANGAN mengonfirmasi bahwa uang sudah otomatis lunas/selesai!
-            - Katakan dengan ramah bahwa konfirmasi/bukti pembayaran sudah diterima dan SEDANG DITERUSKAN UNTUK DICEK & DIVERIFIKASI SECARA MANUAL OLEH ADMIN TOKO.
-            - Beritahu bahwa pesanan akan segera diproses setelah verifikasi selesai.
+            - JIKA pembeli menyatakan sudah transfer/sudah bayar (misal: "sudah transfer", "sudah tf", "sudah bayar", "lunas", "cek mutasi"):
+              1. JANGAN PERNAH mengonfirmasi bahwa uang sudah otomatis lunas/selesai!
+              2. PERHATIKAN CATATAN SISTEM TENTANG FOTO/STRUK BUKTI TRANSFER:
+                 - JIKA CATATAN SISTEM MENYATAKAN PEMBELI MELAMPIRKAN FOTO/GAMBAR BUKTI:
+                   Katakan terima kasih, foto bukti pembayarannya sudah diterima dan sedang diteruskan untuk dicek & diverifikasi manual oleh admin toko/finance.
+                 - JIKA CATATAN SISTEM MENYATAKAN TIDAK ADA FOTO (HANYA TEKS BIASA):
+                   DILARANG KERAS mengatakan "bukti transfer sudah diterima"! Katakan bahwa konfirmasi pembayarannya sudah dicatat dan sedang dicek mutasi oleh admin toko, lalu mintalah dengan sopan agar pembeli mengirimkan foto/screenshot bukti transfernya agar verifikasi bisa lebih cepat diproses.
+              3. Beritahu bahwa pesanan akan segera diproses setelah verifikasi selesai.
             
             BATASAN FORMAT:
             - Balaslah seringkas dan sealami mungkin (chat WhatsApp Indonesia yang hangat, bukan robot kaku).
