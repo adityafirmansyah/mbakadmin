@@ -389,7 +389,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         val adminName = settings.adminName.ifBlank { "Mbak Admin" }
         val shippingFeeText = "Rp${settings.defaultShippingFee.toInt()}"
         val orderFormat = settings.orderFormatTemplate.ifBlank {
-            "Nama Penerima:\nNo. HP/WA:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:"
+            "Nama Penerima:\nNo. HP/WA:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:\nKecamatan & Kota:"
         }
 
         return """

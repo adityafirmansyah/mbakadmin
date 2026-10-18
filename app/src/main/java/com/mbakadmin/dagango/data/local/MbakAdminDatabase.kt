@@ -15,7 +15,7 @@ import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 
 @Database(
     entities = [ProductEntity::class, StoreSettingsEntity::class, ChatLogEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class MbakAdminDatabase : RoomDatabase() {
@@ -169,6 +169,25 @@ abstract class MbakAdminDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migrasi aman dari Versi 8 ke Versi 9:
+         * Menempatkan 'Kecamatan & Kota' setelah 'Alamat Lengkap' pada template pemesanan toko.
+         */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL(
+                        """
+                        UPDATE store_settings 
+                        SET orderFormatTemplate = 'Nama Penerima:\nNo. HP/WA:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:\nKecamatan & Kota:'
+                        WHERE orderFormatTemplate = 'Nama Penerima:\nNo. HP/WA:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:\nAlamat Lengkap:'
+                           OR orderFormatTemplate = 'Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:'
+                        """.trimIndent()
+                    )
+                } catch (_: Exception) {}
+            }
+        }
+
         fun getInstance(context: Context): MbakAdminDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -176,7 +195,7 @@ abstract class MbakAdminDatabase : RoomDatabase() {
                     MbakAdminDatabase::class.java,
                     "mbakadmin.db"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                 .build()
                 INSTANCE = instance
                 instance
