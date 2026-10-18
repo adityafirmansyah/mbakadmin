@@ -91,14 +91,19 @@ fun MainScreen() {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
+            val isAutoReply = settings?.isAutoReplyActive ?: true
             TopAppBar(
                 title = {
                     Column {
                         Text("MbakAdmin 🤖", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            text = if (isListenerEnabled) "Aktif Berjaga" else "Perlu Izin Sistem",
+                            text = if (!isListenerEnabled) "Perlu Izin Sistem"
+                            else if (isAutoReply) "Auto-Reply Aktif"
+                            else "Auto-Reply Nonaktif",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isListenerEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            color = if (!isListenerEnabled) MaterialTheme.colorScheme.error
+                            else if (isAutoReply) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outline
                         )
                     }
                 },
@@ -107,6 +112,29 @@ fun MainScreen() {
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Switch(
+                            checked = isAutoReply,
+                            onCheckedChange = { checked ->
+                                scope.launch {
+                                    val current = settings ?: StoreSettingsEntity()
+                                    app.database.storeSettingsDao().saveSettings(current.copy(isAutoReplyActive = checked))
+                                    val msg = if (checked) "Auto-Reply WhatsApp diaktifkan 🤖" else "Auto-Reply WhatsApp dinonaktifkan ⏸️"
+                                    snackbarHostState.showSnackbar(msg)
+                                }
+                            },
+                            thumbContent = {
+                                Icon(
+                                    imageVector = if (isAutoReply) Icons.Default.Check else Icons.Default.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    }
                     if (selectedTab == 1 && chatLogs.isNotEmpty()) {
                         IconButton(onClick = {
                             scope.launch { app.database.chatLogDao().clearChatLogs() }
@@ -184,12 +212,6 @@ fun MainScreen() {
                         scope.launch {
                             app.database.storeSettingsDao().saveSettings(updated)
                             snackbarHostState.showSnackbar("Pengaturan toko & AI berhasil disimpan!")
-                        }
-                    },
-                    onToggleAutoReply = { isEnabled ->
-                        scope.launch {
-                            val statusText = if (isEnabled) "Auto-Reply diaktifkan 🤖" else "Auto-Reply dinonaktifkan ⏸️"
-                            snackbarHostState.showSnackbar(statusText)
                         }
                     }
                 )
@@ -378,8 +400,7 @@ fun ChatLogsTab(chatLogs: List<ChatLogEntity>) {
 @Composable
 fun StoreSettingsTab(
     currentSettings: StoreSettingsEntity,
-    onSaveSettings: (StoreSettingsEntity) -> Unit,
-    onToggleAutoReply: (Boolean) -> Unit = {}
+    onSaveSettings: (StoreSettingsEntity) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var storeName by remember(currentSettings) { mutableStateOf(currentSettings.storeName) }
@@ -387,7 +408,6 @@ fun StoreSettingsTab(
     var paymentInfo by remember(currentSettings) { mutableStateOf(currentSettings.paymentInfo) }
     var shippingInfo by remember(currentSettings) { mutableStateOf(currentSettings.shippingInfo) }
     var botTone by remember(currentSettings) { mutableStateOf(currentSettings.botTone) }
-    var isAutoReplyActive by remember(currentSettings) { mutableStateOf(currentSettings.isAutoReplyActive) }
     var aiApiBaseUrl by remember(currentSettings) { mutableStateOf(currentSettings.aiApiBaseUrl) }
     var aiApiKey by remember(currentSettings) { mutableStateOf(currentSettings.aiApiKey) }
     var aiModel by remember(currentSettings) { mutableStateOf(currentSettings.aiModel) }
@@ -399,26 +419,6 @@ fun StoreSettingsTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Auto-Reply WhatsApp", style = MaterialTheme.typography.titleMedium)
-                    Text("Aktifkan agar AI otomatis membalas notifikasi chat pembeli", style = MaterialTheme.typography.bodySmall)
-                }
-                Switch(
-                    checked = isAutoReplyActive,
-                    onCheckedChange = {
-                        isAutoReplyActive = it
-                        onToggleAutoReply(it)
-                        onSaveSettings(currentSettings.copy(isAutoReplyActive = it))
-                    }
-                )
-            }
-        }
-
         Text("Informasi Toko & Admin", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = storeName,
@@ -536,7 +536,6 @@ fun StoreSettingsTab(
                         paymentInfo = paymentInfo,
                         shippingInfo = shippingInfo,
                         botTone = botTone,
-                        isAutoReplyActive = isAutoReplyActive,
                         aiApiBaseUrl = aiApiBaseUrl.ifBlank { "https://api.openai.com/v1" },
                         aiApiKey = aiApiKey,
                         aiModel = aiModel.ifBlank { "gpt-4o-mini" }
