@@ -580,14 +580,18 @@ fun StoreSettingsTab(
     var adminName by remember(currentSettings) { mutableStateOf(currentSettings.adminName) }
     var paymentInfo by remember(currentSettings) { mutableStateOf(currentSettings.paymentInfo) }
     var shippingInfo by remember(currentSettings) { mutableStateOf(currentSettings.shippingInfo) }
+    var defaultShippingFee by remember(currentSettings) { mutableStateOf(currentSettings.defaultShippingFee.toInt().toString()) }
+
+    // Advanced Settings State
+    var showAdvancedSettings by remember { mutableStateOf(false) }
     var botTone by remember(currentSettings) { mutableStateOf(currentSettings.botTone) }
     var fallbackReplyMessage by remember(currentSettings) { mutableStateOf(currentSettings.fallbackReplyMessage) }
-    var defaultShippingFee by remember(currentSettings) { mutableStateOf(currentSettings.defaultShippingFee.toInt().toString()) }
     var orderFormatTemplate by remember(currentSettings) { mutableStateOf(currentSettings.orderFormatTemplate) }
-    var aiApiBaseUrl by remember(currentSettings) { mutableStateOf(currentSettings.aiApiBaseUrl) }
-    var aiApiKey by remember(currentSettings) { mutableStateOf(currentSettings.aiApiKey) }
-    var aiModel by remember(currentSettings) { mutableStateOf(currentSettings.aiModel) }
     var aiTimeoutSeconds by remember(currentSettings) { mutableIntStateOf(currentSettings.aiTimeoutSeconds) }
+
+    var isTestingAi by remember { mutableStateOf(false) }
+    var testResultMsg by remember { mutableStateOf<String?>(null) }
+    var isTestSuccess by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -596,36 +600,50 @@ fun StoreSettingsTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Informasi Toko & Admin", style = MaterialTheme.typography.titleMedium)
+        // --- SECTION 1: PROFIL TOKO & PERSONA ---
+        Text("Profil Toko & Admin", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
         OutlinedTextField(
             value = storeName,
             onValueChange = { storeName = it },
             label = { Text("Nama Toko") },
+            placeholder = { Text("Nama Toko Anda") },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
         OutlinedTextField(
             value = adminName,
             onValueChange = { adminName = it },
-            label = { Text("Nama / Panggilan Admin (Persona)") },
+            label = { Text("Panggilan Admin Toko") },
             placeholder = { Text("Contoh: Mbak Admin, Mas Budi, Kak Sarah") },
+            supportingText = { Text("Nama ini yang akan dipakai saat membalas dan menyapa pembeli.") },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
+        // --- SECTION 2: PEMBAYARAN & ONGKIR ---
+        Text("Pembayaran & Pengiriman", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
         OutlinedTextField(
             value = paymentInfo,
             onValueChange = { paymentInfo = it },
             label = { Text("Info Rekening & Pembayaran") },
-            placeholder = { Text("BCA: 1234567890 a/n Toko\nQRIS tersedia") },
+            placeholder = { Text("BCA: 1234567890 a/n Toko Saya\nMandiri: 9876543210 a/n Toko Saya") },
+            supportingText = { Text("Otomatis dikirimkan setelah pembeli melengkapi format pemesanan.") },
             minLines = 3,
             modifier = Modifier.fillMaxWidth()
         )
+
         OutlinedTextField(
             value = shippingInfo,
             onValueChange = { shippingInfo = it },
-            label = { Text("Info Pengiriman & Ekspedisi") },
-            placeholder = { Text("Kirim dari Bandung via J&T, SiCepat, Gosend") },
+            label = { Text("Kota Asal & Ekspedisi Pengiriman") },
+            placeholder = { Text("Kirim dari Jakarta Pusat via JNE, J&T, SiCepat") },
             minLines = 2,
             modifier = Modifier.fillMaxWidth()
         )
+
         OutlinedTextField(
             value = defaultShippingFee,
             onValueChange = { str ->
@@ -633,114 +651,179 @@ fun StoreSettingsTab(
             },
             label = { Text("Estimasi Ongkir Standar (Rp)") },
             placeholder = { Text("15000") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = orderFormatTemplate,
-            onValueChange = { orderFormatTemplate = it },
-            label = { Text("Format Pemesanan Toko (Diminta ke Pembeli)") },
-            placeholder = { Text("Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:") },
-            minLines = 4,
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
 
-        Text("Konfigurasi AI Engine & Proxy", style = MaterialTheme.typography.titleMedium)
-        OutlinedTextField(
-            value = botTone,
-            onValueChange = { botTone = it },
-            label = { Text("Gaya Bicara / Tone Persona") },
-            minLines = 2,
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = fallbackReplyMessage,
-            onValueChange = { fallbackReplyMessage = it },
-            label = { Text("Pesan Cadangan Toko (Fallback Saat AI Offline / Antre)") },
-            placeholder = { Text("Halo kak! Pesan sudah {admin} terima ya, mohon ditunggu sebentar...") },
-            supportingText = { Text("Gunakan {admin} untuk otomatis memanggil nama admin di atas.") },
-            minLines = 2,
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = aiApiBaseUrl,
-            onValueChange = { aiApiBaseUrl = it },
-            label = { Text("API Base URL (OpenAI / OpenRouter / 9Router / Custom)") },
-            placeholder = { Text("http://192.168.18.100:20128/v1") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = aiApiKey,
-            onValueChange = { aiApiKey = it },
-            label = { Text("API Key") },
-            placeholder = { Text("sk-...") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = aiModel,
-            onValueChange = { aiModel = it },
-            label = { Text("Model AI (Default: gpt-4o-mini)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = aiTimeoutSeconds.toString(),
-            onValueChange = { str ->
-                val filtered = str.filter { it.isDigit() }
-                aiTimeoutSeconds = filtered.toIntOrNull() ?: 60
-            },
-            label = { Text("Batas Waktu AI / Timeout (Detik, Rekomendasi: 60)") },
-            placeholder = { Text("60") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        var isTestingAi by remember { mutableStateOf(false) }
-        var testResultMsg by remember { mutableStateOf<String?>(null) }
-        var isTestSuccess by remember { mutableStateOf(false) }
-
-        OutlinedButton(
-            onClick = {
-                isTestingAi = true
-                testResultMsg = null
-                scope.launch(Dispatchers.IO) {
-                    val result = testAiConnection(
-                        baseUrl = aiApiBaseUrl.ifBlank { "https://api.openai.com/v1" },
-                        apiKey = aiApiKey,
-                        model = aiModel.ifBlank { "gpt-4o-mini" },
-                        timeoutSec = aiTimeoutSeconds.coerceIn(10, 180).toLong()
-                    )
-                    isTestingAi = false
-                    isTestSuccess = result.first
-                    testResultMsg = result.second
-                }
-            },
-            enabled = !isTestingAi,
+        // --- SECTION 3: STATUS ENGINE AI TERINTEGRASI ---
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (isTestingAi) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Menghubungkan ke AI...")
-            } else {
-                Icon(Icons.Default.Speed, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Test Koneksi AI")
-            }
-        }
-
-        testResultMsg?.let { msg ->
-            Surface(
-                color = if (isTestSuccess) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("✨ AI Engine Aktif", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    }
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = MaterialTheme.shapes.extraSmall
+                    ) {
+                        Text(
+                            text = "Hermes Combo",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
                 Text(
-                    text = msg,
+                    text = "AI bawaan MbakAdmin terhubung otomatis ke server berkecepatan tinggi tanpa perlu setting API Key rumit.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isTestSuccess) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(10.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                OutlinedButton(
+                    onClick = {
+                        isTestingAi = true
+                        testResultMsg = null
+                        scope.launch(Dispatchers.IO) {
+                            val result = testAiConnection(
+                                baseUrl = StoreSettingsEntity.DEFAULT_AI_BASE_URL,
+                                apiKey = StoreSettingsEntity.DEFAULT_AI_API_KEY,
+                                model = StoreSettingsEntity.DEFAULT_AI_MODEL,
+                                timeoutSec = aiTimeoutSeconds.coerceIn(10, 180).toLong()
+                            )
+                            isTestingAi = false
+                            isTestSuccess = result.first
+                            testResultMsg = result.second
+                        }
+                    },
+                    enabled = !isTestingAi,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isTestingAi) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Memeriksa Koneksi AI...")
+                    } else {
+                        Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Test Koneksi AI")
+                    }
+                }
+
+                testResultMsg?.let { msg ->
+                    Surface(
+                        color = if (isTestSuccess) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = msg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isTestSuccess) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
             }
         }
 
+        // --- SECTION 4: PENGATURAN LANJUTAN (COLLAPSIBLE / ACCORDION) ---
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showAdvancedSettings = !showAdvancedSettings }
+                        .padding(vertical = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(
+                            if (showAdvancedSettings) Icons.Default.Tune else Icons.Default.Settings,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text("Pengaturan Lanjutan", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text("Kustomisasi format order, gaya bahasa & fallback", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        }
+                    }
+                    Icon(
+                        if (showAdvancedSettings) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.outline
+                    )
+                }
+
+                if (showAdvancedSettings) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = orderFormatTemplate,
+                        onValueChange = { orderFormatTemplate = it },
+                        label = { Text("Template Format Pemesanan") },
+                        placeholder = { Text("Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:") },
+                        supportingText = { Text("Format yang dikirimkan bot saat pembeli berniat order.") },
+                        minLines = 4,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = botTone,
+                        onValueChange = { botTone = it },
+                        label = { Text("Gaya Bicara / Tone Persona") },
+                        placeholder = { Text("ramah, sopan, persuasif ala admin olshop") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = fallbackReplyMessage,
+                        onValueChange = { fallbackReplyMessage = it },
+                        label = { Text("Pesan Cadangan (Fallback)") },
+                        placeholder = { Text("Halo kak! Pesan sudah {admin} terima ya...") },
+                        supportingText = { Text("Dipakai jika koneksi internet offline. Gunakan {admin} untuk nama admin.") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = aiTimeoutSeconds.toString(),
+                        onValueChange = { str ->
+                            val filtered = str.filter { it.isDigit() }
+                            aiTimeoutSeconds = filtered.toIntOrNull() ?: 60
+                        },
+                        label = { Text("Batas Waktu Respon AI (Detik)") },
+                        placeholder = { Text("60") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // --- SECTION 5: TOMBOL SIMPAN PENGATURAN ---
         Button(
             onClick = {
                 onSaveSettings(
@@ -757,9 +840,9 @@ fun StoreSettingsTab(
                         fallbackReplyMessage = fallbackReplyMessage.ifBlank {
                             "Halo kak! Pesan sudah {admin} terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"
                         },
-                        aiApiBaseUrl = aiApiBaseUrl.ifBlank { "https://api.openai.com/v1" },
-                        aiApiKey = aiApiKey,
-                        aiModel = aiModel.ifBlank { "gpt-4o-mini" },
+                        aiApiBaseUrl = StoreSettingsEntity.DEFAULT_AI_BASE_URL,
+                        aiApiKey = StoreSettingsEntity.DEFAULT_AI_API_KEY,
+                        aiModel = StoreSettingsEntity.DEFAULT_AI_MODEL,
                         aiTimeoutSeconds = aiTimeoutSeconds.coerceIn(15, 180)
                     )
                 )
