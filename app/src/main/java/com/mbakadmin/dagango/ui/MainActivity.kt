@@ -359,10 +359,12 @@ fun StoreSettingsTab(
     onSaveSettings: (StoreSettingsEntity) -> Unit
 ) {
     var storeName by remember(currentSettings) { mutableStateOf(currentSettings.storeName) }
+    var adminName by remember(currentSettings) { mutableStateOf(currentSettings.adminName) }
     var paymentInfo by remember(currentSettings) { mutableStateOf(currentSettings.paymentInfo) }
     var shippingInfo by remember(currentSettings) { mutableStateOf(currentSettings.shippingInfo) }
     var botTone by remember(currentSettings) { mutableStateOf(currentSettings.botTone) }
     var isAutoReplyActive by remember(currentSettings) { mutableStateOf(currentSettings.isAutoReplyActive) }
+    var aiApiBaseUrl by remember(currentSettings) { mutableStateOf(currentSettings.aiApiBaseUrl) }
     var aiApiKey by remember(currentSettings) { mutableStateOf(currentSettings.aiApiKey) }
     var aiModel by remember(currentSettings) { mutableStateOf(currentSettings.aiModel) }
 
@@ -389,11 +391,18 @@ fun StoreSettingsTab(
             }
         }
 
-        Text("Informasi Toko", style = MaterialTheme.typography.titleMedium)
+        Text("Informasi Toko & Admin", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = storeName,
             onValueChange = { storeName = it },
             label = { Text("Nama Toko") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = adminName,
+            onValueChange = { adminName = it },
+            label = { Text("Nama / Panggilan Admin (Persona)") },
+            placeholder = { Text("Contoh: Mbak Admin, Mas Budi, Kak Sarah") },
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
@@ -413,7 +422,7 @@ fun StoreSettingsTab(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Text("Konfigurasi AI Persona", style = MaterialTheme.typography.titleMedium)
+        Text("Konfigurasi AI Engine & Proxy", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = botTone,
             onValueChange = { botTone = it },
@@ -422,9 +431,16 @@ fun StoreSettingsTab(
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
+            value = aiApiBaseUrl,
+            onValueChange = { aiApiBaseUrl = it },
+            label = { Text("API Base URL (OpenAI / OpenRouter / 9Router / Custom)") },
+            placeholder = { Text("https://api.openai.com/v1") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
             value = aiApiKey,
             onValueChange = { aiApiKey = it },
-            label = { Text("OpenAI / LLM API Key") },
+            label = { Text("API Key") },
             placeholder = { Text("sk-...") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -440,10 +456,12 @@ fun StoreSettingsTab(
                 onSaveSettings(
                     currentSettings.copy(
                         storeName = storeName,
+                        adminName = adminName.ifBlank { "Mbak Admin" },
                         paymentInfo = paymentInfo,
                         shippingInfo = shippingInfo,
                         botTone = botTone,
                         isAutoReplyActive = isAutoReplyActive,
+                        aiApiBaseUrl = aiApiBaseUrl.ifBlank { "https://api.openai.com/v1" },
                         aiApiKey = aiApiKey,
                         aiModel = aiModel.ifBlank { "gpt-4o-mini" }
                     )
