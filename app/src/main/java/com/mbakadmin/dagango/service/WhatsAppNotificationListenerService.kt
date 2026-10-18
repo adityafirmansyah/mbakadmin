@@ -364,8 +364,12 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         historyLogs: List<com.mbakadmin.dagango.data.local.entity.ChatLogEntity>,
         customerMessage: String
     ): String {
-        // Jika API key belum diisi pengguna
-        if (settings.aiApiKey.isBlank()) {
+        val apiKey = settings.aiApiKey.ifBlank { StoreSettingsEntity.DEFAULT_AI_API_KEY }
+        val baseUrl = settings.aiApiBaseUrl.ifBlank { StoreSettingsEntity.DEFAULT_AI_BASE_URL }.trim()
+        val model = settings.aiModel.ifBlank { StoreSettingsEntity.DEFAULT_AI_MODEL }
+
+        // Jika API key tetap kosong
+        if (apiKey.isBlank()) {
             return ""
         }
 
@@ -401,17 +405,13 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
             }
 
             val payload = JSONObject().apply {
-                put("model", settings.aiModel.ifBlank { "gpt-4o-mini" })
+                put("model", model)
                 put("messages", messagesArray)
                 put("temperature", 0.7)
                 put("max_tokens", 400)
                 put("stream", false)
             }
 
-            var baseUrl = settings.aiApiBaseUrl.trim()
-            if (baseUrl.isBlank()) {
-                baseUrl = "https://api.openai.com/v1"
-            }
             // Normalisasi URL endpoint: pastikan mengarah ke /chat/completions
             val endpoint = if (baseUrl.endsWith("/chat/completions")) {
                 baseUrl
@@ -421,7 +421,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
 
             val request = Request.Builder()
                 .url(endpoint)
-                .addHeader("Authorization", "Bearer ${settings.aiApiKey}")
+                .addHeader("Authorization", "Bearer $apiKey")
                 .addHeader("Content-Type", "application/json")
                 .post(payload.toString().toRequestBody("application/json".toMediaType()))
                 .build()
