@@ -190,8 +190,10 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
             }
         }
 
+        val adminName = settings.adminName.ifBlank { "Mbak Admin" }
+
         return """
-            Kamu adalah 'Mbak Admin', asisten penjualan resmi toko '${settings.storeName}'.
+            Kamu adalah '$adminName', asisten penjualan resmi toko '${settings.storeName}'.
             Gaya Bicara: ${settings.botTone}.
             
             Informasi Pembayaran:
@@ -211,9 +213,11 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
     }
 
     private fun callAiEngine(settings: StoreSettingsEntity, systemPrompt: String, userPrompt: String): String {
+        val adminName = settings.adminName.ifBlank { "Mbak Admin" }
+
         // Fallback jika API key belum diisi pengguna
         if (settings.aiApiKey.isBlank()) {
-            return "Halo kak! Pesan sudah Mbak Admin terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"
+            return "Halo kak! Pesan sudah $adminName terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"
         }
 
         try {
@@ -233,15 +237,30 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
                 put("max_tokens", 200)
             }
 
+            var baseUrl = settings.aiApiBaseUrl.trim()
+            if (baseUrl.isBlank()) {
+                baseUrl = "https://api.openai.com/v1"
+            }
+            // Normalisasi URL endpoint: pastikan mengarah ke /chat/completions
+            val endpoint = if (baseUrl.endsWith("/chat/completions")) {
+                baseUrl
+            } else {
+                "${baseUrl.trimEnd('/')}/chat/completions"
+            }
+
             val request = Request.Builder()
-                .url("https://api.openai.com/v1/chat/completions")
+                .url(endpoint)
                 .addHeader("Authorization", "Bearer ${settings.aiApiKey}")
                 .addHeader("Content-Type", "application/json")
                 .post(payload.toString().toRequestBody("application/json".toMediaType()))
                 .build()
 
             httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return ""
+                if (!response.isSuccessful) {
+                    val errBody = response.body?.string() ?: ""
+                    Log.e(TAG, "Request AI gagal code: ${response.code}, body: $errBody")
+                    return ""
+                }
                 val body = response.body?.string() ?: return ""
                 val json = JSONObject(body)
                 val choices = json.optJSONArray("choices") ?: return ""

@@ -13,7 +13,7 @@ import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 
 @Database(
     entities = [ProductEntity::class, StoreSettingsEntity::class, ChatLogEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class MbakAdminDatabase : RoomDatabase() {
@@ -31,7 +31,8 @@ abstract class MbakAdminDatabase : RoomDatabase() {
                     context.applicationContext,
                     MbakAdminDatabase::class.java,
                     "mbakadmin.db"
-                ).build()
+                ).fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }
