@@ -205,7 +205,16 @@ fun MainScreen() {
                         }
                     }
                 )
-                1 -> ChatLogsTab(chatLogs = chatLogs)
+                1 -> ChatLogsTab(
+                    chatLogs = chatLogs,
+                    onVerifyPayment = { logId, isVerified ->
+                        scope.launch {
+                            app.database.chatLogDao().updateVerificationStatus(logId, isVerified)
+                            val msg = if (isVerified) "Pembayaran berhasil diverifikasi! ✅" else "Status verifikasi dibatalkan"
+                            snackbarHostState.showSnackbar(msg)
+                        }
+                    }
+                )
                 2 -> StoreSettingsTab(
                     currentSettings = settings ?: StoreSettingsEntity(),
                     onSaveSettings = { updated ->
@@ -337,7 +346,10 @@ fun CatalogTab(
 }
 
 @Composable
-fun ChatLogsTab(chatLogs: List<ChatLogEntity>) {
+fun ChatLogsTab(
+    chatLogs: List<ChatLogEntity>,
+    onVerifyPayment: (Long, Boolean) -> Unit = { _, _ -> }
+) {
     if (chatLogs.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -356,7 +368,14 @@ fun ChatLogsTab(chatLogs: List<ChatLogEntity>) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(chatLogs) { log ->
-                Card(modifier = Modifier.fillMaxWidth()) {
+                val needsVerification = log.isPaymentClaimed && !log.isVerifiedByHuman
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (needsVerification) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f)
+                        else MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -390,6 +409,53 @@ fun ChatLogsTab(chatLogs: List<ChatLogEntity>) {
                                 modifier = Modifier.padding(8.dp)
                             )
                         }
+
+                        // Human Verification Banner & Action
+                        if (log.isPaymentClaimed) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (!log.isVerifiedByHuman) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.errorContainer,
+                                        shape = MaterialTheme.shapes.extraSmall
+                                    ) {
+                                        Text(
+                                            text = "⏳ Perlu Verifikasi Pembayaran",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                    Button(
+                                        onClick = { onVerifyPayment(log.id, true) },
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Verifikasi", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                } else {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = MaterialTheme.shapes.extraSmall
+                                    ) {
+                                        Text(
+                                            text = "✅ Pembayaran Terverifikasi",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                    TextButton(onClick = { onVerifyPayment(log.id, false) }) {
+                                        Text("Batal Verifikasi", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -409,6 +475,8 @@ fun StoreSettingsTab(
     var shippingInfo by remember(currentSettings) { mutableStateOf(currentSettings.shippingInfo) }
     var botTone by remember(currentSettings) { mutableStateOf(currentSettings.botTone) }
     var fallbackReplyMessage by remember(currentSettings) { mutableStateOf(currentSettings.fallbackReplyMessage) }
+    var defaultShippingFee by remember(currentSettings) { mutableStateOf(currentSettings.defaultShippingFee.toInt().toString()) }
+    var orderFormatTemplate by remember(currentSettings) { mutableStateOf(currentSettings.orderFormatTemplate) }
     var aiApiBaseUrl by remember(currentSettings) { mutableStateOf(currentSettings.aiApiBaseUrl) }
     var aiApiKey by remember(currentSettings) { mutableStateOf(currentSettings.aiApiKey) }
     var aiModel by remember(currentSettings) { mutableStateOf(currentSettings.aiModel) }
@@ -449,6 +517,23 @@ fun StoreSettingsTab(
             label = { Text("Info Pengiriman & Ekspedisi") },
             placeholder = { Text("Kirim dari Bandung via J&T, SiCepat, Gosend") },
             minLines = 2,
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = defaultShippingFee,
+            onValueChange = { str ->
+                defaultShippingFee = str.filter { it.isDigit() }
+            },
+            label = { Text("Estimasi Ongkir Standar (Rp)") },
+            placeholder = { Text("15000") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = orderFormatTemplate,
+            onValueChange = { orderFormatTemplate = it },
+            label = { Text("Format Pemesanan Toko (Diminta ke Pembeli)") },
+            placeholder = { Text("Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:") },
+            minLines = 4,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -557,6 +642,10 @@ fun StoreSettingsTab(
                         adminName = adminName.ifBlank { "Mbak Admin" },
                         paymentInfo = paymentInfo,
                         shippingInfo = shippingInfo,
+                        defaultShippingFee = defaultShippingFee.toDoubleOrNull() ?: 15000.0,
+                        orderFormatTemplate = orderFormatTemplate.ifBlank {
+                            "Nama Penerima:\nNo. HP/WA:\nAlamat Lengkap:\nKecamatan & Kota:\nPesanan & Varian:\nJumlah:"
+                        },
                         botTone = botTone,
                         fallbackReplyMessage = fallbackReplyMessage.ifBlank {
                             "Halo kak! Pesan sudah {admin} terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"

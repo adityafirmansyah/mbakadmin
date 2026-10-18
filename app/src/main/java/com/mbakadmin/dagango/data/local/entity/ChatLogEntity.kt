@@ -10,5 +10,7 @@ data class ChatLogEntity(
     val senderName: String,
     val incomingMessage: String,
     val aiReply: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val isPaymentClaimed: Boolean = false,
+    val isVerifiedByHuman: Boolean = false
 )

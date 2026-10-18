@@ -40,8 +40,14 @@ interface ChatLogDao {
     @Query("SELECT * FROM chat_logs ORDER BY timestamp DESC LIMIT 100")
     fun getRecentChatLogs(): Flow<List<com.mbakadmin.dagango.data.local.entity.ChatLogEntity>>
 
+    @Query("SELECT * FROM chat_logs WHERE senderName = :senderName ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getRecentMessagesForSender(senderName: String, limit: Int = 6): List<com.mbakadmin.dagango.data.local.entity.ChatLogEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChatLog(chatLog: com.mbakadmin.dagango.data.local.entity.ChatLogEntity): Long
+
+    @Query("UPDATE chat_logs SET isVerifiedByHuman = :isVerified WHERE id = :id")
+    suspend fun updateVerificationStatus(id: Long, isVerified: Boolean)
 
     @Query("DELETE FROM chat_logs")
     suspend fun clearChatLogs()
