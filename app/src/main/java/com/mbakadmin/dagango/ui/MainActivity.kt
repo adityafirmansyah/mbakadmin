@@ -408,6 +408,7 @@ fun StoreSettingsTab(
     var paymentInfo by remember(currentSettings) { mutableStateOf(currentSettings.paymentInfo) }
     var shippingInfo by remember(currentSettings) { mutableStateOf(currentSettings.shippingInfo) }
     var botTone by remember(currentSettings) { mutableStateOf(currentSettings.botTone) }
+    var fallbackReplyMessage by remember(currentSettings) { mutableStateOf(currentSettings.fallbackReplyMessage) }
     var aiApiBaseUrl by remember(currentSettings) { mutableStateOf(currentSettings.aiApiBaseUrl) }
     var aiApiKey by remember(currentSettings) { mutableStateOf(currentSettings.aiApiKey) }
     var aiModel by remember(currentSettings) { mutableStateOf(currentSettings.aiModel) }
@@ -456,6 +457,15 @@ fun StoreSettingsTab(
             value = botTone,
             onValueChange = { botTone = it },
             label = { Text("Gaya Bicara / Tone Persona") },
+            minLines = 2,
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = fallbackReplyMessage,
+            onValueChange = { fallbackReplyMessage = it },
+            label = { Text("Pesan Cadangan Toko (Fallback Saat AI Offline / Antre)") },
+            placeholder = { Text("Halo kak! Pesan sudah {admin} terima ya, mohon ditunggu sebentar...") },
+            supportingText = { Text("Gunakan {admin} untuk otomatis memanggil nama admin di atas.") },
             minLines = 2,
             modifier = Modifier.fillMaxWidth()
         )
@@ -548,6 +558,9 @@ fun StoreSettingsTab(
                         paymentInfo = paymentInfo,
                         shippingInfo = shippingInfo,
                         botTone = botTone,
+                        fallbackReplyMessage = fallbackReplyMessage.ifBlank {
+                            "Halo kak! Pesan sudah {admin} terima ya, mohon ditunggu sebentar biar segera dicek manual oleh tim kami 🙏"
+                        },
                         aiApiBaseUrl = aiApiBaseUrl.ifBlank { "https://api.openai.com/v1" },
                         aiApiKey = aiApiKey,
                         aiModel = aiModel.ifBlank { "gpt-4o-mini" },
