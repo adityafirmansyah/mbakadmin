@@ -77,6 +77,7 @@ fun MainScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
     val products by app.database.productDao().getAllProducts().collectAsState(initial = emptyList())
     val chatLogs by app.database.chatLogDao().getRecentChatLogs().collectAsState(initial = emptyList())
     val settings by app.database.storeSettingsDao().getSettingsFlow().collectAsState(initial = null)
@@ -85,6 +86,7 @@ fun MainScreen() {
     var isCreatingNewProduct by remember { mutableStateOf(false) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -158,11 +160,17 @@ fun MainScreen() {
                     products = products,
                     onEditProduct = { showAddEditProductDialog = it },
                     onDeleteProduct = { product ->
-                        scope.launch { app.database.productDao().deleteProduct(product) }
+                        scope.launch {
+                            app.database.productDao().deleteProduct(product)
+                            snackbarHostState.showSnackbar("Produk '${product.name}' berhasil dihapus")
+                        }
                     },
                     onToggleActive = { product ->
                         scope.launch {
-                            app.database.productDao().updateProduct(product.copy(isActive = !product.isActive))
+                            val newStatus = !product.isActive
+                            app.database.productDao().updateProduct(product.copy(isActive = newStatus))
+                            val statusText = if (newStatus) "diaktifkan" else "dinonaktifkan"
+                            snackbarHostState.showSnackbar("Stok '${product.name}' $statusText")
                         }
                     }
                 )
@@ -170,7 +178,16 @@ fun MainScreen() {
                 2 -> StoreSettingsTab(
                     currentSettings = settings ?: StoreSettingsEntity(),
                     onSaveSettings = { updated ->
-                        scope.launch { app.database.storeSettingsDao().saveSettings(updated) }
+                        scope.launch {
+                            app.database.storeSettingsDao().saveSettings(updated)
+                            snackbarHostState.showSnackbar("Pengaturan toko & AI berhasil disimpan!")
+                        }
+                    },
+                    onToggleAutoReply = { isEnabled ->
+                        scope.launch {
+                            val statusText = if (isEnabled) "Auto-Reply diaktifkan 🤖" else "Auto-Reply dinonaktifkan ⏸️"
+                            snackbarHostState.showSnackbar(statusText)
+                        }
                     }
                 )
                 3 -> SystemReliabilityTab(
@@ -190,6 +207,7 @@ fun MainScreen() {
                 scope.launch {
                     app.database.productDao().insertProduct(product)
                     isCreatingNewProduct = false
+                    snackbarHostState.showSnackbar("Produk '${product.name}' berhasil ditambahkan!")
                 }
             }
         )
@@ -203,6 +221,7 @@ fun MainScreen() {
                 scope.launch {
                     app.database.productDao().updateProduct(updated)
                     showAddEditProductDialog = null
+                    snackbarHostState.showSnackbar("Perubahan '${updated.name}' tersimpan!")
                 }
             }
         )
@@ -356,7 +375,8 @@ fun ChatLogsTab(chatLogs: List<ChatLogEntity>) {
 @Composable
 fun StoreSettingsTab(
     currentSettings: StoreSettingsEntity,
-    onSaveSettings: (StoreSettingsEntity) -> Unit
+    onSaveSettings: (StoreSettingsEntity) -> Unit,
+    onToggleAutoReply: (Boolean) -> Unit = {}
 ) {
     var storeName by remember(currentSettings) { mutableStateOf(currentSettings.storeName) }
     var adminName by remember(currentSettings) { mutableStateOf(currentSettings.adminName) }
@@ -386,7 +406,11 @@ fun StoreSettingsTab(
                 }
                 Switch(
                     checked = isAutoReplyActive,
-                    onCheckedChange = { isAutoReplyActive = it }
+                    onCheckedChange = {
+                        isAutoReplyActive = it
+                        onToggleAutoReply(it)
+                        onSaveSettings(currentSettings.copy(isAutoReplyActive = it))
+                    }
                 )
             }
         }
