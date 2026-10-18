@@ -411,6 +411,7 @@ fun StoreSettingsTab(
     var aiApiBaseUrl by remember(currentSettings) { mutableStateOf(currentSettings.aiApiBaseUrl) }
     var aiApiKey by remember(currentSettings) { mutableStateOf(currentSettings.aiApiKey) }
     var aiModel by remember(currentSettings) { mutableStateOf(currentSettings.aiModel) }
+    var aiTimeoutSeconds by remember(currentSettings) { mutableIntStateOf(currentSettings.aiTimeoutSeconds) }
 
     Column(
         modifier = Modifier
@@ -478,6 +479,16 @@ fun StoreSettingsTab(
             label = { Text("Model AI (Default: gpt-4o-mini)") },
             modifier = Modifier.fillMaxWidth()
         )
+        OutlinedTextField(
+            value = aiTimeoutSeconds.toString(),
+            onValueChange = { str ->
+                val filtered = str.filter { it.isDigit() }
+                aiTimeoutSeconds = filtered.toIntOrNull() ?: 60
+            },
+            label = { Text("Batas Waktu AI / Timeout (Detik, Rekomendasi: 60)") },
+            placeholder = { Text("60") },
+            modifier = Modifier.fillMaxWidth()
+        )
 
         var isTestingAi by remember { mutableStateOf(false) }
         var testResultMsg by remember { mutableStateOf<String?>(null) }
@@ -491,7 +502,8 @@ fun StoreSettingsTab(
                     val result = testAiConnection(
                         baseUrl = aiApiBaseUrl.ifBlank { "https://api.openai.com/v1" },
                         apiKey = aiApiKey,
-                        model = aiModel.ifBlank { "gpt-4o-mini" }
+                        model = aiModel.ifBlank { "gpt-4o-mini" },
+                        timeoutSec = aiTimeoutSeconds.coerceIn(10, 180).toLong()
                     )
                     isTestingAi = false
                     isTestSuccess = result.first
@@ -538,7 +550,8 @@ fun StoreSettingsTab(
                         botTone = botTone,
                         aiApiBaseUrl = aiApiBaseUrl.ifBlank { "https://api.openai.com/v1" },
                         aiApiKey = aiApiKey,
-                        aiModel = aiModel.ifBlank { "gpt-4o-mini" }
+                        aiModel = aiModel.ifBlank { "gpt-4o-mini" },
+                        aiTimeoutSeconds = aiTimeoutSeconds.coerceIn(15, 180)
                     )
                 )
             },
@@ -746,11 +759,11 @@ fun isNotificationServiceEnabled(context: Context): Boolean {
     return false
 }
 
-private fun testAiConnection(baseUrl: String, apiKey: String, model: String): Pair<Boolean, String> {
+private fun testAiConnection(baseUrl: String, apiKey: String, model: String, timeoutSec: Long = 60L): Pair<Boolean, String> {
     try {
         val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(timeoutSec, java.util.concurrent.TimeUnit.SECONDS)
             .build()
 
         val endpoint = if (baseUrl.endsWith("/chat/completions")) {

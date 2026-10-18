@@ -111,7 +111,7 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         val messageHash = "${chatIdentifier}_${cleanIncoming}"
         val now = System.currentTimeMillis()
         val lastProcessed = processedMessageCache[messageHash] ?: 0L
-        if (now - lastProcessed < 20_000) {
+        if (now - lastProcessed < 60_000) {
             return
         }
 
@@ -138,8 +138,8 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
                     replyAction = replyAction
                 )
             } finally {
-                // Beri jeda 15 detik sebelum melepas lock agar bounce update notifikasi selesai
-                delay(15_000)
+                // Beri jeda 30 detik sebelum melepas lock agar bounce update notifikasi selesai
+                delay(30_000)
                 inFlightMessages.remove(messageHash)
             }
         }
@@ -349,7 +349,15 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
                 .post(payload.toString().toRequestBody("application/json".toMediaType()))
                 .build()
 
-            httpClient.newCall(request).execute().use { response ->
+            // Timeout dinamis berbasis konfigurasi toko (default 60s, batas 15s - 180s)
+            val timeoutSec = settings.aiTimeoutSeconds.toLong().coerceIn(15L, 180L)
+            val client = httpClient.newBuilder()
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(timeoutSec, TimeUnit.SECONDS)
+                .writeTimeout(20, TimeUnit.SECONDS)
+                .build()
+
+            client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     val errBody = response.body?.string() ?: ""
                     Log.e(TAG, "Request AI gagal code: ${response.code}, body: $errBody")
