@@ -168,7 +168,7 @@ fun MainScreen() {
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     icon = { Icon(Icons.Default.Storefront, contentDescription = null) },
-                    label = { Text("Toko & AI") }
+                    label = { Text("Toko") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
@@ -575,23 +575,17 @@ fun StoreSettingsTab(
     currentSettings: StoreSettingsEntity,
     onSaveSettings: (StoreSettingsEntity) -> Unit
 ) {
-    val scope = rememberCoroutineScope()
     var storeName by remember(currentSettings) { mutableStateOf(currentSettings.storeName) }
     var adminName by remember(currentSettings) { mutableStateOf(currentSettings.adminName) }
     var paymentInfo by remember(currentSettings) { mutableStateOf(currentSettings.paymentInfo) }
     var shippingInfo by remember(currentSettings) { mutableStateOf(currentSettings.shippingInfo) }
     var defaultShippingFee by remember(currentSettings) { mutableStateOf(currentSettings.defaultShippingFee.toInt().toString()) }
 
-    // Advanced Settings State
+    // Advanced Settings State (Collapsible)
     var showAdvancedSettings by remember { mutableStateOf(false) }
     var botTone by remember(currentSettings) { mutableStateOf(currentSettings.botTone) }
     var fallbackReplyMessage by remember(currentSettings) { mutableStateOf(currentSettings.fallbackReplyMessage) }
     var orderFormatTemplate by remember(currentSettings) { mutableStateOf(currentSettings.orderFormatTemplate) }
-    var aiTimeoutSeconds by remember(currentSettings) { mutableIntStateOf(currentSettings.aiTimeoutSeconds) }
-
-    var isTestingAi by remember { mutableStateOf(false) }
-    var testResultMsg by remember { mutableStateOf<String?>(null) }
-    var isTestSuccess by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -600,7 +594,7 @@ fun StoreSettingsTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // --- SECTION 1: PROFIL TOKO & PERSONA ---
+        // --- SECTION 1: PROFIL TOKO & ADMIN ---
         Text("Profil Toko & Admin", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         OutlinedTextField(
@@ -622,7 +616,7 @@ fun StoreSettingsTab(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // --- SECTION 2: PEMBAYARAN & ONGKIR ---
+        // --- SECTION 2: PEMBAYARAN & PENGIRIMAN ---
         Text("Pembayaran & Pengiriman", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         OutlinedTextField(
@@ -655,86 +649,7 @@ fun StoreSettingsTab(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // --- SECTION 3: STATUS ENGINE AI TERINTEGRASI ---
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("✨ AI Engine Aktif", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    }
-                    Surface(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = MaterialTheme.shapes.extraSmall
-                    ) {
-                        Text(
-                            text = "Hermes Combo",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-                Text(
-                    text = "AI bawaan MbakAdmin terhubung otomatis ke server berkecepatan tinggi tanpa perlu setting API Key rumit.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        isTestingAi = true
-                        testResultMsg = null
-                        scope.launch(Dispatchers.IO) {
-                            val result = testAiConnection(
-                                baseUrl = StoreSettingsEntity.DEFAULT_AI_BASE_URL,
-                                apiKey = StoreSettingsEntity.DEFAULT_AI_API_KEY,
-                                model = StoreSettingsEntity.DEFAULT_AI_MODEL,
-                                timeoutSec = aiTimeoutSeconds.coerceIn(10, 180).toLong()
-                            )
-                            isTestingAi = false
-                            isTestSuccess = result.first
-                            testResultMsg = result.second
-                        }
-                    },
-                    enabled = !isTestingAi,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (isTestingAi) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Memeriksa Koneksi AI...")
-                    } else {
-                        Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Test Koneksi AI")
-                    }
-                }
-
-                testResultMsg?.let { msg ->
-                    Surface(
-                        color = if (isTestSuccess) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
-                        shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = msg,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isTestSuccess) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(10.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- SECTION 4: PENGATURAN LANJUTAN (COLLAPSIBLE / ACCORDION) ---
+        // --- SECTION 3: PENGATURAN LANJUTAN (COLLAPSIBLE / ACCORDION) ---
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -803,27 +718,13 @@ fun StoreSettingsTab(
                         minLines = 2,
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = aiTimeoutSeconds.toString(),
-                        onValueChange = { str ->
-                            val filtered = str.filter { it.isDigit() }
-                            aiTimeoutSeconds = filtered.toIntOrNull() ?: 60
-                        },
-                        label = { Text("Batas Waktu Respon AI (Detik)") },
-                        placeholder = { Text("60") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // --- SECTION 5: TOMBOL SIMPAN PENGATURAN ---
+        // --- SECTION 4: TOMBOL SIMPAN PENGATURAN ---
         Button(
             onClick = {
                 onSaveSettings(
@@ -842,8 +743,7 @@ fun StoreSettingsTab(
                         },
                         aiApiBaseUrl = StoreSettingsEntity.DEFAULT_AI_BASE_URL,
                         aiApiKey = StoreSettingsEntity.DEFAULT_AI_API_KEY,
-                        aiModel = StoreSettingsEntity.DEFAULT_AI_MODEL,
-                        aiTimeoutSeconds = aiTimeoutSeconds.coerceIn(15, 180)
+                        aiModel = StoreSettingsEntity.DEFAULT_AI_MODEL
                     )
                 )
             },
@@ -1049,109 +949,6 @@ fun isNotificationServiceEnabled(context: Context): Boolean {
         }
     }
     return false
-}
-
-private fun testAiConnection(baseUrl: String, apiKey: String, model: String, timeoutSec: Long = 60L): Pair<Boolean, String> {
-    try {
-        val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(timeoutSec, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
-
-        val endpoint = if (baseUrl.endsWith("/chat/completions")) {
-            baseUrl
-        } else {
-            "${baseUrl.trimEnd('/')}/chat/completions"
-        }
-
-        val payload = org.json.JSONObject().apply {
-            put("model", model)
-            put("messages", org.json.JSONArray().apply {
-                put(org.json.JSONObject().apply {
-                    put("role", "user")
-                    put("content", "ping")
-                })
-            })
-            put("max_tokens", 10)
-            put("stream", false)
-        }
-
-        val requestBuilder = okhttp3.Request.Builder()
-            .url(endpoint)
-            .addHeader("Content-Type", "application/json")
-            .post(payload.toString().toRequestBody("application/json".toMediaType()))
-
-        if (apiKey.isNotBlank()) {
-            requestBuilder.addHeader("Authorization", "Bearer $apiKey")
-        }
-
-        client.newCall(requestBuilder.build()).execute().use { response ->
-            if (response.isSuccessful) {
-                val body = response.body?.string() ?: ""
-                val text = extractAiResponseContent(body)
-                if (text.isNotBlank()) {
-                    return Pair(true, "✅ Koneksi Berhasil! Respon ($model): \"$text\"")
-                } else {
-                    return Pair(false, "❌ Respon kosong dari model $model")
-                }
-            } else {
-                val errBody = response.body?.string() ?: ""
-                return Pair(false, "❌ Gagal HTTP ${response.code}: $errBody")
-            }
-        }
-    } catch (e: Exception) {
-        return Pair(false, "❌ Error: ${e.javaClass.simpleName} - ${e.message}")
-    }
-}
-
-private fun extractAiResponseContent(rawBody: String): String {
-    val body = rawBody.trim()
-    if (body.isBlank()) return ""
-
-    // 1. Coba parse standard JSON object
-    if (body.startsWith("{")) {
-        try {
-            val json = org.json.JSONObject(body)
-            val choices = json.optJSONArray("choices")
-            if (choices != null && choices.length() > 0) {
-                val choice = choices.getJSONObject(0)
-                val message = choice.optJSONObject("message")
-                val content = message?.optString("content")
-                if (!content.isNullOrBlank()) return content.trim()
-
-                val delta = choice.optJSONObject("delta")
-                val deltaContent = delta?.optString("content")
-                if (!deltaContent.isNullOrBlank()) return deltaContent.trim()
-            }
-        } catch (_: Exception) {}
-    }
-
-    // 2. Fallback parse SSE stream (data: {...}\n\ndata: {...})
-    if (body.contains("data:")) {
-        val contentBuilder = StringBuilder()
-        body.lines().forEach { line ->
-            val trimmed = line.trim()
-            if (trimmed.startsWith("data:") && !trimmed.contains("[DONE]")) {
-                val jsonStr = trimmed.removePrefix("data:").trim()
-                try {
-                    val json = org.json.JSONObject(jsonStr)
-                    val choices = json.optJSONArray("choices")
-                    if (choices != null && choices.length() > 0) {
-                        val choice = choices.getJSONObject(0)
-                        val delta = choice.optJSONObject("delta")
-                        val part = delta?.optString("content")
-                        if (!part.isNullOrEmpty()) {
-                            contentBuilder.append(part)
-                        }
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-        val sseResult = contentBuilder.toString().trim()
-        if (sseResult.isNotBlank()) return sseResult
-    }
-
-    return ""
 }
 
 fun openWhatsAppMessage(context: Context, phone: String, message: String) {
