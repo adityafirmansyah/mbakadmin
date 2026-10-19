@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" preserveAspectRatio="xMidYMid meet">
+  <rect width="512" height="512" preserveAspectRatio="xMidYMid meet" rx="115" fill="#7C3AED"/>
+  <!-- Minimalist Hexagon/Circle Tech Frame -->
+  <circle cx="256" cy="265" r="185" fill="#6D28D9"/>
+  <!-- Minimalist Torso -->
+  <path d="M160 512 L190 440 L256 455 L322 440 L352 512 Z" fill="#FFFFFF"/>
+  <path d="M225 448 L256 460 L287 448 L275 490 L256 498 L237 490 Z" fill="#0F172A"/>
+  <!-- Neck -->
+  <rect x="238" y="360" width="36" height="85" fill="#FFFFFF"/>
+  <rect x="246" y="395" width="20" height="6" rx="3" fill="#06B6D4"/>
+  <!-- Back Hair (Solid Jet Black Bob) -->
+  <path d="M140 220 C 130 350, 155 420, 185 450 L 256 465 L 327 450 C 357 420, 382 350, 372 220 Z" fill="#0F172A"/>
+  <!-- Face: Oval Clean Minimalist White -->
+  <path d="M180 215 C 180 135, 332 135, 332 215 C 332 300, 288 365, 256 375 C 224 365, 180 300, 180 215 Z" fill="#FFFFFF"/>
+  <!-- Cheeks: Clean Minimalist Coral -->
+  <circle cx="206" cy="290" r="8" fill="#F43F5E"/>
+  <circle cx="306" cy="290" r="8" fill="#F43F5E"/>
+  <!-- Mouth: Clean subtle line -->
+  <path d="M246 318 Q256 328 266 318" fill="none" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- Eyes: Ultra Clean Minimalist Anime Gaze -->
+  <path d="M196 244 C 206 232, 222 232, 232 244" fill="none" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="214" cy="256" rx="12" ry="17" fill="#06B6D4"/>
+  <ellipse cx="214" cy="256" rx="6" ry="9" fill="#0F172A"/>
+  <circle cx="211" cy="250" r="4" fill="#FFFFFF"/>
+  <path d="M280 244 C 290 232, 306 232, 316 244" fill="none" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="298" cy="256" rx="12" ry="17" fill="#06B6D4"/>
+  <ellipse cx="298" cy="256" rx="6" ry="9" fill="#0F172A"/>
+  <circle cx="295" cy="250" r="4.5" fill="#FFFFFF"/>
+  <!-- Minimalist Bangs (Straight Hime-Cut Style with Clean Cuts) -->
+  <path d="M174 205 C 180 135, 332 135, 338 205 L338 225 L320 220 L305 245 L290 215 L270 245 L256 215 L242 245 L222 215 L207 245 L192 220 L174 225 Z" fill="#0F172A"/>
+  <!-- Minimalist Headset (Futuristic Dual-Tone Disc) -->
+  <g transform="translate(142, 230)">
+    <circle cx="0" cy="0" r="26" fill="#0F172A"/>
+    <circle cx="0" cy="0" r="16" fill="#FFFFFF"/>
+    <circle cx="0" cy="0" r="8" fill="#06B6D4"/>
+  </g>
+  <g transform="translate(370, 230)">
+    <circle cx="0" cy="0" r="26" fill="#0F172A"/>
+    <circle cx="0" cy="0" r="16" fill="#FFFFFF"/>
+    <circle cx="0" cy="0" r="8" fill="#06B6D4"/>
+    <!-- Mic -->
+    <path d="M -6 14 Q -25 50 -70 58 L -88 60" fill="none" stroke="#0F172A" stroke-width="6.5" stroke-linecap="round"/>
+    <circle cx="-98" cy="61" r="9" fill="#06B6D4"/>
+    <circle cx="-98" cy="61" r="4" fill="#FFFFFF"/>
+  </g>
+</svg>
