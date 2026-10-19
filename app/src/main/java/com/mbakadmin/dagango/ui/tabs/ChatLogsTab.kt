@@ -42,13 +42,14 @@ fun ChatLogsTab(
             chatLogs
                 .groupBy { it.senderName }
                 .map { (sender, logs) ->
-                    val timeSorted = logs.sortedBy { it.timestamp }
-                    val latest = logs.maxByOrNull { it.timestamp } ?: logs.first()
+                    // Urutkan dari yang paling baru (index 0) ke paling lama (terbawah saat expand)
+                    val sortedDesc = logs.sortedByDescending { it.timestamp }
+                    val latest = sortedDesc.first()
                     val pendingLog = logs.firstOrNull { it.isPaymentClaimed && !it.isVerifiedByHuman }
                     val phone = logs.firstOrNull { it.customerPhone.isNotBlank() }?.customerPhone ?: ""
                     ChatSenderGroup(
                         senderName = sender,
-                        messages = timeSorted,
+                        messages = sortedDesc,
                         latestMessage = latest,
                         hasPendingVerification = pendingLog != null,
                         pendingVerificationLog = pendingLog,
@@ -61,26 +62,31 @@ fun ChatLogsTab(
                 )
         }
 
-        var expandedSenderNames by remember { mutableStateOf(setOf<String>()) }
+        // Ketika 1 group dibuka, group lain disembunyikan (fokus ke single opened thread)
+        var openedSenderName by remember { mutableStateOf<String?>(null) }
+
+        val displayedGroups = remember(senderGroups, openedSenderName) {
+            if (openedSenderName == null) {
+                senderGroups
+            } else {
+                senderGroups.filter { it.senderName == openedSenderName }
+            }
+        }
 
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(senderGroups, key = { it.senderName }) { group ->
-                val isExpanded = expandedSenderNames.contains(group.senderName)
+            items(displayedGroups, key = { it.senderName }) { group ->
+                val isExpanded = openedSenderName == group.senderName
 
                 StackedSenderChatCard(
                     group = group,
                     isExpanded = isExpanded,
                     onToggleExpand = {
-                        expandedSenderNames = if (isExpanded) {
-                            expandedSenderNames - group.senderName
-                        } else {
-                            expandedSenderNames + group.senderName
-                        }
+                        openedSenderName = if (isExpanded) null else group.senderName
                     },
                     onVerifyClick = onVerifyClick,
                     onShippingClick = onShippingClick,
