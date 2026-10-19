@@ -261,23 +261,38 @@ fun MainScreen() {
     }
 
     fulfillmentLog?.let { log ->
+        val senderLogs = remember(log, chatLogs) {
+            chatLogs.filter { it.senderName.equals(log.senderName, ignoreCase = true) }
+        }
         FulfillmentDialog(
             log = log,
             products = products,
+            recentLogs = senderLogs,
             onDismiss = { fulfillmentLog = null },
-            onConfirmFulfillment = { selectedProduct, qty, sendWa ->
+            onConfirmFulfillment = { itemsToDeduct, sendWa ->
                 scope.launch {
-                    if (selectedProduct != null && qty > 0) {
-                        app.database.productDao().deductStock(selectedProduct.id, qty)
+                    itemsToDeduct.forEach { (selectedProduct, qty) ->
+                        if (qty > 0) {
+                            app.database.productDao().deductStock(selectedProduct.id, qty)
+                        }
                     }
                     app.database.chatLogDao().updateVerificationStatus(log.id, true, "VERIFIED")
                     fulfillmentLog = null
-                    snackbarHostState.showSnackbar("Pembayaran diverifikasi & stok diperbarui! ✅")
+                    val count = itemsToDeduct.size
+                    val msg = if (count > 0) {
+                        "Pembayaran diverifikasi & stok $count produk diperbarui! ✅"
+                    } else {
+                        "Pembayaran diverifikasi! ✅"
+                    }
+                    snackbarHostState.showSnackbar(msg)
 
                     if (sendWa) {
                         val adminName = settings?.adminName?.ifBlank { "Mbak Admin" } ?: "Mbak Admin"
                         val waMsg = "Halo kak ${log.senderName}! Pembayaran untuk pesanan kakak sudah diverifikasi lunas ya oleh $adminName. Pesanan sedang disiapkan untuk packing & pengiriman. Terima kasih banyak! 🙏"
-                        openWhatsAppMessage(context, log.customerPhone, waMsg, settings?.targetWhatsAppPackage ?: "ALL")
+                        val targetPhone = log.customerPhone.ifBlank {
+                            senderLogs.firstOrNull { it.customerPhone.isNotBlank() }?.customerPhone ?: ""
+                        }
+                        openWhatsAppMessage(context, targetPhone, waMsg, settings?.targetWhatsAppPackage ?: "ALL")
                     }
                 }
             }
