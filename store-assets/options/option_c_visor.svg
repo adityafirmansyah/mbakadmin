@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" preserveAspectRatio="xMidYMid meet">
+  <rect width="512" height="512" preserveAspectRatio="xMidYMid meet" rx="115" fill="#7C3AED"/>
+  <circle cx="256" cy="270" r="185" fill="#6D28D9"/>
+  <!-- Mecha Hair Ribbons / Cyber Wing Accents -->
+  <polygon points="120,120 80,60 150,90" fill="#06B6D4"/>
+  <polygon points="110,135 60,110 135,115" fill="#0F172A"/>
+  <polygon points="392,120 432,60 362,90" fill="#06B6D4"/>
+  <polygon points="402,135 452,110 377,115" fill="#0F172A"/>
+  <!-- Long Sleek Cyber Hair -->
+  <path d="M120 220 L105 450 L155 420 L160 260 Z" fill="#0F172A"/>
+  <path d="M392 220 L407 450 L357 420 L352 260 Z" fill="#0F172A"/>
+  <!-- Mecha Outfit Shoulders (Cyber Jacket) -->
+  <path d="M130 512 L170 420 L256 440 L342 420 L382 512 Z" fill="#0F172A"/>
+  <polygon points="210,430 256,442 302,430 290,470 256,480 222,470" fill="#FFFFFF"/>
+  <line x1="256" y1="442" x2="256" y2="480" stroke="#06B6D4" stroke-width="4"/>
+  <!-- Neck -->
+  <path d="M234 340 L234 430 C 248 435, 264 435, 278 430 L278 340 Z" fill="#FFFFFF"/>
+  <rect x="242" y="380" width="28" height="6" rx="3" fill="#06B6D4"/>
+  <!-- Face Shape -->
+  <path d="M175 210 C 175 130, 337 130, 337 210 C 337 300, 290 370, 256 380 C 222 370, 175 300, 175 210 Z" fill="#FFFFFF"/>
+  <circle cx="204" cy="295" r="9" fill="#FB7185"/>
+  <circle cx="308" cy="295" r="9" fill="#FB7185"/>
+  <!-- Smile -->
+  <path d="M245 320 Q256 332 267 320" fill="none" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- Eyes -->
+  <!-- Left Eye: Normal expressive anime eye -->
+  <path d="M192 248 C 202 235, 220 235, 230 248" fill="none" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="211" cy="260" rx="13" ry="18" fill="#06B6D4"/>
+  <ellipse cx="211" cy="260" rx="6.5" ry="9" fill="#0F172A"/>
+  <circle cx="207" cy="254" r="4.5" fill="#FFFFFF"/>
+  <!-- Right Eye with CYBER TECH SCOPE / VISOR GLASS -->
+  <path d="M282 248 C 292 235, 310 235, 320 248" fill="none" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="301" cy="260" rx="13" ry="18" fill="#06B6D4"/>
+  <circle cx="297" cy="254" r="4.5" fill="#FFFFFF"/>
+  <!-- High-Tech Monocle / Smart HUD Glass over Right Eye -->
+  <rect x="272" y="235" width="58" height="50" rx="12" fill="none" stroke="#22D3EE" stroke-width="5"/>
+  <path d="M330 258 L370 250" stroke="#0F172A" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="282" cy="245" r="3" fill="#22D3EE"/>
+  <circle cx="320" cy="275" r="3" fill="#22D3EE"/>
+  <!-- Hair: Sleek Asymmetrical Bangs -->
+  <path d="M168 190 C 175 110, 337 110, 344 190 C 348 230, 340 260, 325 210 C 315 250, 280 270, 270 230 C 255 270, 215 260, 205 230 C 190 260, 175 240, 168 190 Z" fill="#0F172A"/>
+  <path d="M260 120 C 270 70, 295 75, 295 85 C 295 98, 272 105, 262 120 Z" fill="#FFFFFF"/> <!-- White Ahoge -->
+  <!-- Sleek Operator Headset -->
+  <g transform="translate(376, 235)">
+    <rect x="-10" y="-22" width="28" height="44" rx="8" fill="#0F172A"/>
+    <rect x="-4" y="-16" width="16" height="32" rx="4" fill="#22D3EE"/>
+    <!-- Mic -->
+    <path d="M -8 12 Q -30 55 -80 62 L -98 64" fill="none" stroke="#0F172A" stroke-width="6.5" stroke-linecap="round"/>
+    <rect x="-114" y="56" width="18" height="16" rx="5" fill="#22D3EE" stroke="#0F172A" stroke-width="3"/>
+  </g>
+</svg>

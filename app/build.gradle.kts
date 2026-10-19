@@ -14,8 +14,8 @@ android {
         applicationId = "com.mbakadmin.dagango"
         minSdk = 26
         targetSdk = 36
-        versionCode = 22
-        versionName = "0.1.22"
+        versionCode = 24
+        versionName = "0.1.24"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
