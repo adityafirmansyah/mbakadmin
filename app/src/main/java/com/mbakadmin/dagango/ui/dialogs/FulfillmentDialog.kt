@@ -39,7 +39,7 @@ fun FulfillmentDialog(
     }
 
     var selectedItems by remember(detectedOrders) {
-        mutableStateOf(
+        mutableStateOf<List<OrderFulfillmentItemState>>(
             if (detectedOrders.isNotEmpty()) {
                 detectedOrders.map { OrderFulfillmentItemState(it.product, it.quantity.toString(), isChecked = true) }
             } else {
