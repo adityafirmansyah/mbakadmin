@@ -1,7 +1,10 @@
 package com.mbakadmin.dagango.ui
 
+import android.app.Activity
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
@@ -11,7 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.mbakadmin.dagango.MbakAdminApp
@@ -35,9 +40,35 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        // Enforce dark status bar and navigation bar icons for the light canvas in all device modes
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT
+            )
+        )
         super.onCreate(savedInstanceState)
+
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+
         setContent {
+            val view = LocalView.current
+            if (!view.isInEditMode) {
+                SideEffect {
+                    val currentWindow = (view.context as? Activity)?.window ?: window
+                    WindowCompat.getInsetsController(currentWindow, view).apply {
+                        isAppearanceLightStatusBars = true
+                        isAppearanceLightNavigationBars = true
+                    }
+                }
+            }
             MaterialTheme {
                 MainScreen()
             }
