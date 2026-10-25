@@ -106,7 +106,6 @@ fun FullWidthNavBar(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = (-AppDnaTokens.FabElevationOffset))
                 .size(AppDnaTokens.FabSize)
                 .shadow(
                     elevation = AppDnaTokens.ElevationLevel2,
