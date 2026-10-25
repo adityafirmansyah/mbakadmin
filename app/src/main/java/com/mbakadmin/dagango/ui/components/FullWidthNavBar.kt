@@ -34,6 +34,7 @@ fun FullWidthNavBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .height(76.dp)
     ) {
         // Nav bar container

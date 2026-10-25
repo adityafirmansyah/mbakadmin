@@ -94,7 +94,8 @@ fun HeroSaturatedCard(
                         )
                     )
                     Text(
-                        text = if (isAutoReplyActive) "Memantau & membalas chat pembeli"
+                        text = if (!isListenerEnabled) "Aktifkan izin notifikasi di tab Sistem"
+                        else if (isAutoReplyActive) "Memantau & membalas chat pembeli"
                         else "Aktifkan agar bot membalas otomatis",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = AppDnaTokens.ForegroundSubtle
