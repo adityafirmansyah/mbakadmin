@@ -3,6 +3,7 @@ package com.mbakadmin.dagango.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,8 +14,14 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mbakadmin.dagango.data.local.entity.ProductEntity
+import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 
+/**
+ * Pattern: `tinted-card-white-floating`
+ * Floating white card with 24dp radius, hairline border, 16dp internal padding.
+ */
 @Composable
 fun CompactProductListItem(
     product: ProductEntity,
@@ -25,17 +32,16 @@ fun CompactProductListItem(
     var showMenu by remember { mutableStateOf(false) }
     val isOutOfStock = product.stock <= 0
 
-    Card(
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = if (!product.isActive) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            else MaterialTheme.colorScheme.surface
-        ),
+    Surface(
+        shape = RoundedCornerShape(AppDnaTokens.RadiusCard),
+        color = if (!product.isActive) AppDnaTokens.SurfaceMuted.copy(alpha = 0.5f)
+        else AppDnaTokens.SurfaceCard,
         border = BorderStroke(
-            1.dp,
-            if (!product.isActive) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+            0.5.dp,
+            if (!product.isActive) AppDnaTokens.BorderCard.copy(alpha = 0.5f)
+            else AppDnaTokens.BorderCard
         ),
+        shadowElevation = if (product.isActive) AppDnaTokens.ElevationLevel1 else 0.dp,
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onEdit(product) }
@@ -44,31 +50,31 @@ fun CompactProductListItem(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Leading Icon Avatar
+            // Leading Icon Avatar (SurfaceMuted container)
             Surface(
-                shape = MaterialTheme.shapes.small,
-                color = if (isOutOfStock) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                else if (product.isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                else MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(38.dp)
+                shape = RoundedCornerShape(AppDnaTokens.RadiusMicro),
+                color = if (isOutOfStock) AppDnaTokens.RoseAlert.copy(alpha = 0.12f)
+                else if (product.isActive) AppDnaTokens.SurfaceMuted
+                else AppDnaTokens.SurfaceMuted.copy(alpha = 0.5f),
+                modifier = Modifier.size(44.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = if (isOutOfStock) Icons.Default.Warning else Icons.Default.Inventory2,
                         contentDescription = null,
-                        tint = if (isOutOfStock) MaterialTheme.colorScheme.error
-                        else if (product.isActive) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(20.dp)
+                        tint = if (isOutOfStock) AppDnaTokens.RoseAlert
+                        else if (product.isActive) AppDnaTokens.PrimaryHero
+                        else AppDnaTokens.ForegroundMuted,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            // Center details
+            // Center Details
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -76,8 +82,10 @@ fun CompactProductListItem(
                 ) {
                     Text(
                         text = product.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = if (product.isActive) AppDnaTokens.Foreground else AppDnaTokens.ForegroundMuted
+                        ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -85,14 +93,18 @@ fun CompactProductListItem(
 
                     if (isOutOfStock) {
                         Surface(
-                            shape = MaterialTheme.shapes.extraSmall,
-                            color = MaterialTheme.colorScheme.errorContainer
+                            shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
+                            color = AppDnaTokens.RoseAlert.copy(alpha = 0.15f)
                         ) {
                             Text(
-                                text = "Habis",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                text = "HABIS",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 0.8.sp
+                                ),
+                                color = AppDnaTokens.RoseAlert,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
@@ -104,24 +116,39 @@ fun CompactProductListItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    // Oversized numeral style price
                     Text(
                         text = "Rp ${product.price.toInt()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = AppDnaTokens.Foreground
+                        )
                     )
-                    Text("•", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                    Text(
-                        text = "Stok: ${product.stock}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isOutOfStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text("•", style = MaterialTheme.typography.bodySmall, color = AppDnaTokens.ForegroundSubtle)
+
+                    // Micro-label stock
+                    Surface(
+                        shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
+                        color = if (isOutOfStock) AppDnaTokens.RoseAlert.copy(alpha = 0.1f) else AppDnaTokens.SurfaceMuted
+                    ) {
+                        Text(
+                            text = "STOK: ${product.stock}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = AppDnaTokens.TextMicro,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isOutOfStock) AppDnaTokens.RoseAlert else AppDnaTokens.ForegroundMuted
+                            ),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
                     if (product.variants.isNotBlank()) {
-                        Text("•", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        Text("•", style = MaterialTheme.typography.bodySmall, color = AppDnaTokens.ForegroundSubtle)
                         Text(
                             text = product.variants,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = AppDnaTokens.ForegroundMuted
+                            ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -131,11 +158,17 @@ fun CompactProductListItem(
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            // Trailing Active Switch
+            // Switch (DNA Saturated Accent)
             Switch(
                 checked = product.isActive,
                 onCheckedChange = { onToggleActive(product) },
-                modifier = Modifier.scale(0.8f)
+                modifier = Modifier.scale(0.8f),
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = AppDnaTokens.SurfaceCard,
+                    checkedTrackColor = AppDnaTokens.PrimaryHero,
+                    uncheckedThumbColor = AppDnaTokens.ForegroundMuted,
+                    uncheckedTrackColor = AppDnaTokens.SurfaceMuted
+                )
             )
 
             // 3-dots overflow menu
@@ -148,7 +181,7 @@ fun CompactProductListItem(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Opsi",
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.outline
+                        tint = AppDnaTokens.ForegroundMuted
                     )
                 }
 
@@ -157,7 +190,7 @@ fun CompactProductListItem(
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Edit Produk") },
+                        text = { Text("Edit Produk", color = AppDnaTokens.Foreground) },
                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             showMenu = false
@@ -165,8 +198,8 @@ fun CompactProductListItem(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Hapus Produk", color = MaterialTheme.colorScheme.error) },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
+                        text = { Text("Hapus Produk", color = AppDnaTokens.RoseAlert) },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = AppDnaTokens.RoseAlert, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             showMenu = false
                             onDelete(product)
@@ -188,17 +221,16 @@ fun CompactProductGridCard(
     var showMenu by remember { mutableStateOf(false) }
     val isOutOfStock = product.stock <= 0
 
-    Card(
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = if (!product.isActive) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-            else MaterialTheme.colorScheme.surface
-        ),
+    Surface(
+        shape = RoundedCornerShape(AppDnaTokens.RadiusCard),
+        color = if (!product.isActive) AppDnaTokens.SurfaceMuted.copy(alpha = 0.5f)
+        else AppDnaTokens.SurfaceCard,
         border = BorderStroke(
-            1.dp,
-            if (!product.isActive) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+            0.5.dp,
+            if (!product.isActive) AppDnaTokens.BorderCard.copy(alpha = 0.5f)
+            else AppDnaTokens.BorderCard
         ),
+        shadowElevation = if (product.isActive) AppDnaTokens.ElevationLevel1 else 0.dp,
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onEdit(product) }
@@ -206,42 +238,50 @@ fun CompactProductGridCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp)
+                .padding(14.dp)
         ) {
-            // Top Header: Stock Badge & Switch
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Surface(
-                    shape = MaterialTheme.shapes.extraSmall,
-                    color = if (isOutOfStock) MaterialTheme.colorScheme.errorContainer
-                    else MaterialTheme.colorScheme.secondaryContainer
+                    shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
+                    color = if (isOutOfStock) AppDnaTokens.RoseAlert.copy(alpha = 0.15f)
+                    else AppDnaTokens.SurfaceMuted
                 ) {
                     Text(
-                        text = if (isOutOfStock) "Habis" else "Stok: ${product.stock}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isOutOfStock) MaterialTheme.colorScheme.onErrorContainer
-                        else MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        text = if (isOutOfStock) "HABIS" else "STOK: ${product.stock}",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = AppDnaTokens.TextMicro,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp
+                        ),
+                        color = if (isOutOfStock) AppDnaTokens.RoseAlert
+                        else AppDnaTokens.ForegroundMuted,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
 
                 Switch(
                     checked = product.isActive,
                     onCheckedChange = { onToggleActive(product) },
-                    modifier = Modifier.scale(0.72f)
+                    modifier = Modifier.scale(0.72f),
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = AppDnaTokens.SurfaceCard,
+                        checkedTrackColor = AppDnaTokens.PrimaryHero
+                    )
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Product Name
             Text(
                 text = product.name,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = AppDnaTokens.Foreground
+                ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.heightIn(min = 36.dp)
@@ -251,16 +291,16 @@ fun CompactProductGridCard(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = product.variants,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = AppDnaTokens.ForegroundMuted
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Bottom Row: Price & 3-dot menu
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -268,9 +308,10 @@ fun CompactProductGridCard(
             ) {
                 Text(
                     text = "Rp ${product.price.toInt()}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AppDnaTokens.Foreground
+                    )
                 )
 
                 Box {
@@ -293,8 +334,8 @@ fun CompactProductGridCard(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Hapus", color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp)) },
+                            text = { Text("Hapus", color = AppDnaTokens.RoseAlert) },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = AppDnaTokens.RoseAlert, modifier = Modifier.size(16.dp)) },
                             onClick = {
                                 showMenu = false
                                 onDelete(product)
@@ -315,21 +356,21 @@ fun DeleteProductConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Hapus Produk?", style = MaterialTheme.typography.titleMedium) },
+        title = { Text("Hapus Produk?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
         text = {
             Text("Produk \"${product.name}\" akan dihapus permanen dari katalog toko.")
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                colors = ButtonDefaults.buttonColors(containerColor = AppDnaTokens.RoseAlert)
             ) {
-                Text("Hapus", color = MaterialTheme.colorScheme.onError)
+                Text("Hapus", color = AppDnaTokens.OnPrimaryHero, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Batal")
+                Text("Batal", color = AppDnaTokens.ForegroundMuted)
             }
         }
     )

@@ -4,8 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +18,9 @@ import com.mbakadmin.dagango.data.local.entity.ChatLogEntity
 import com.mbakadmin.dagango.data.local.entity.ProductEntity
 import com.mbakadmin.dagango.data.local.entity.StoreSettingsEntity
 import com.mbakadmin.dagango.service.MbakAdminGuardianService
+import com.mbakadmin.dagango.ui.components.FullWidthNavBar
+import com.mbakadmin.dagango.ui.components.HeroSaturatedCard
+import com.mbakadmin.dagango.ui.components.dotGridCanvas
 import com.mbakadmin.dagango.ui.dialogs.FulfillmentDialog
 import com.mbakadmin.dagango.ui.dialogs.ProductDialog
 import com.mbakadmin.dagango.ui.dialogs.ShippingDialog
@@ -27,6 +28,7 @@ import com.mbakadmin.dagango.ui.tabs.CatalogTab
 import com.mbakadmin.dagango.ui.tabs.ChatLogsTab
 import com.mbakadmin.dagango.ui.tabs.StoreSettingsTab
 import com.mbakadmin.dagango.ui.tabs.SystemReliabilityTab
+import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 import com.mbakadmin.dagango.util.BatteryOptimizationHelper
 import kotlinx.coroutines.launch
 
@@ -35,18 +37,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    MainScreen()
-                }
+                MainScreen()
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Productivity Focus App DNA — Main Screen
+ * Mandatory Patterns: `dot-grid-canvas`, `hero-saturated`, `full-width-nav`, `fab-elevated`.
+ */
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
@@ -54,7 +54,7 @@ fun MainScreen() {
     val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Katalog, 1: Riwayat Chat, 2: Toko & AI, 3: Sistem
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Katalog, 1: Chat Log, 2: Toko, 3: Sistem
 
     var isListenerEnabled by remember { mutableStateOf(isNotificationServiceEnabled(context)) }
     var isBatteryOptimized by remember { mutableStateOf(!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) }
@@ -83,155 +83,116 @@ fun MainScreen() {
     var fulfillmentLog by remember { mutableStateOf<ChatLogEntity?>(null) }
     var shippingLog by remember { mutableStateOf<ChatLogEntity?>(null) }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            val isAutoReply = settings?.isAutoReplyActive ?: true
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("MbakAdmin 🤖", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            text = if (!isListenerEnabled) "Perlu Izin Sistem"
-                            else if (isAutoReply) "Auto-Reply Aktif"
-                            else "Auto-Reply Nonaktif",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (!isListenerEnabled) MaterialTheme.colorScheme.error
-                            else if (isAutoReply) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outline
-                        )
+    val activeCount = remember(products) { products.count { it.isActive } }
+    val pendingCount = remember(chatLogs) { chatLogs.count { it.isPaymentClaimed && !it.isVerifiedByHuman } }
+    val isAutoReply = settings?.isAutoReplyActive ?: true
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .dotGridCanvas()
+    ) {
+        // Main Column with 20dp margin & 84dp bottom clearance for full-width nav
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = AppDnaTokens.MarginHorizontal,
+                    end = AppDnaTokens.MarginHorizontal,
+                    top = 16.dp,
+                    bottom = 76.dp
+                )
+        ) {
+            // Mandatory Pattern: `hero-saturated` (Corner radius 32dp, dark charcoal anchor)
+            HeroSaturatedCard(
+                storeName = settings?.storeName ?: "MbakAdmin",
+                isAutoReplyActive = isAutoReply,
+                isListenerEnabled = isListenerEnabled,
+                onToggleAutoReply = { checked ->
+                    scope.launch {
+                        val current = settings ?: StoreSettingsEntity()
+                        app.database.storeSettingsDao().saveSettings(current.copy(isAutoReplyActive = checked))
+                        val msg = if (checked) "Auto-Reply WhatsApp diaktifkan 🤖" else "Auto-Reply WhatsApp dinonaktifkan ⏸️"
+                        snackbarHostState.showSnackbar(msg)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Switch(
-                            checked = isAutoReply,
-                            onCheckedChange = { checked ->
-                                scope.launch {
-                                    val current = settings ?: StoreSettingsEntity()
-                                    app.database.storeSettingsDao().saveSettings(current.copy(isAutoReplyActive = checked))
-                                    val msg = if (checked) "Auto-Reply WhatsApp diaktifkan 🤖" else "Auto-Reply WhatsApp dinonaktifkan ⏸️"
-                                    snackbarHostState.showSnackbar(msg)
-                                }
-                            },
-                            thumbContent = {
-                                Icon(
-                                    imageVector = if (isAutoReply) Icons.Default.Check else Icons.Default.Close,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    }
-                    if (selectedTab == 1 && chatLogs.isNotEmpty()) {
-                        IconButton(onClick = {
-                            scope.launch { app.database.chatLogDao().clearChatLogs() }
-                        }) {
-                            Icon(Icons.Default.DeleteSweep, contentDescription = "Bersihkan Log")
-                        }
-                    }
-                }
+                activeProductsCount = activeCount,
+                pendingVerificationsCount = pendingCount
             )
-        },
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Inventory2, contentDescription = null) },
-                    label = { Text("Katalog") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.Forum, contentDescription = null) },
-                    label = { Text("Chat Log") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Storefront, contentDescription = null) },
-                    label = { Text("Toko") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    icon = { Icon(Icons.Default.Security, contentDescription = null) },
-                    label = { Text("Sistem") }
-                )
-            }
-        },
-        floatingActionButton = {
-            if (selectedTab == 0) {
-                FloatingActionButton(onClick = { isCreatingNewProduct = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Tambah Produk")
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Screen Content Routing
+            Box(modifier = Modifier.weight(1f)) {
+                when (selectedTab) {
+                    0 -> CatalogTab(
+                        products = products,
+                        onEditProduct = { showAddEditProductDialog = it },
+                        onDeleteProduct = { product ->
+                            scope.launch {
+                                app.database.productDao().deleteProduct(product)
+                                snackbarHostState.showSnackbar("Produk '${product.name}' berhasil dihapus")
+                            }
+                        },
+                        onToggleActive = { product ->
+                            scope.launch {
+                                val newStatus = !product.isActive
+                                app.database.productDao().updateProduct(product.copy(isActive = newStatus))
+                                val statusText = if (newStatus) "diaktifkan" else "dinonaktifkan"
+                                snackbarHostState.showSnackbar("Stok '${product.name}' $statusText")
+                            }
+                        }
+                    )
+                    1 -> ChatLogsTab(
+                        chatLogs = chatLogs,
+                        onVerifyClick = { log -> fulfillmentLog = log },
+                        onShippingClick = { log -> shippingLog = log },
+                        onCancelVerify = { logId ->
+                            scope.launch {
+                                app.database.chatLogDao().updateVerificationStatus(logId, false, "PENDING")
+                                snackbarHostState.showSnackbar("Status verifikasi dibatalkan")
+                            }
+                        },
+                        onDirectSendWa = { phone, msg ->
+                            openWhatsAppMessage(context, phone, msg, settings?.targetWhatsAppPackage ?: "ALL")
+                        }
+                    )
+                    2 -> StoreSettingsTab(
+                        currentSettings = settings ?: StoreSettingsEntity(),
+                        onSaveSettings = { updated ->
+                            scope.launch {
+                                app.database.storeSettingsDao().saveSettings(updated)
+                                snackbarHostState.showSnackbar("Pengaturan toko & AI berhasil disimpan!")
+                            }
+                        }
+                    )
+                    3 -> SystemReliabilityTab(
+                        context = context,
+                        isListenerEnabled = isListenerEnabled,
+                        isBatteryOptimized = isBatteryOptimized
+                    )
                 }
             }
         }
-    ) { innerPadding ->
-        Box(
+
+        // Snackbar Host
+        SnackbarHost(
+            hostState = snackbarHostState,
             modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            when (selectedTab) {
-                0 -> CatalogTab(
-                    products = products,
-                    onEditProduct = { showAddEditProductDialog = it },
-                    onDeleteProduct = { product ->
-                        scope.launch {
-                            app.database.productDao().deleteProduct(product)
-                            snackbarHostState.showSnackbar("Produk '${product.name}' berhasil dihapus")
-                        }
-                    },
-                    onToggleActive = { product ->
-                        scope.launch {
-                            val newStatus = !product.isActive
-                            app.database.productDao().updateProduct(product.copy(isActive = newStatus))
-                            val statusText = if (newStatus) "diaktifkan" else "dinonaktifkan"
-                            snackbarHostState.showSnackbar("Stok '${product.name}' $statusText")
-                        }
-                    }
-                )
-                1 -> ChatLogsTab(
-                    chatLogs = chatLogs,
-                    onVerifyClick = { log -> fulfillmentLog = log },
-                    onShippingClick = { log -> shippingLog = log },
-                    onCancelVerify = { logId ->
-                        scope.launch {
-                            app.database.chatLogDao().updateVerificationStatus(logId, false, "PENDING")
-                            snackbarHostState.showSnackbar("Status verifikasi dibatalkan")
-                        }
-                    },
-                    onDirectSendWa = { phone, msg ->
-                        openWhatsAppMessage(context, phone, msg, settings?.targetWhatsAppPackage ?: "ALL")
-                    }
-                )
-                2 -> StoreSettingsTab(
-                    currentSettings = settings ?: StoreSettingsEntity(),
-                    onSaveSettings = { updated ->
-                        scope.launch {
-                            app.database.storeSettingsDao().saveSettings(updated)
-                            snackbarHostState.showSnackbar("Pengaturan toko & AI berhasil disimpan!")
-                        }
-                    }
-                )
-                3 -> SystemReliabilityTab(
-                    context = context,
-                    isListenerEnabled = isListenerEnabled,
-                    isBatteryOptimized = isBatteryOptimized
-                )
-            }
-        }
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+        )
+
+        // Mandatory Patterns: `full-width-nav` & `fab-elevated`
+        FullWidthNavBar(
+            selectedTab = selectedTab,
+            onSelectTab = { selectedTab = it },
+            onFabClick = { isCreatingNewProduct = true },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
+    // Dialogs
     if (isCreatingNewProduct) {
         ProductDialog(
             initialProduct = null,

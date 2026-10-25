@@ -4,15 +4,20 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mbakadmin.dagango.ui.components.StatusCard
+import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 import com.mbakadmin.dagango.util.BatteryOptimizationHelper
 
 @Composable
@@ -22,12 +27,18 @@ fun SystemReliabilityTab(
     isBatteryOptimized: Boolean
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(AppDnaTokens.GapFeed)
     ) {
-        Text("Status Kesiapan Sistem", style = MaterialTheme.typography.titleLarge)
+        Text(
+            "STATUS KESIAPAN SISTEM",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = AppDnaTokens.TextEyebrow,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            ),
+            color = AppDnaTokens.ForegroundMuted
+        )
 
         StatusCard(
             title = if (isListenerEnabled) "Izin Notifikasi WhatsApp Aktif" else "Izin Notifikasi Belum Aktif",
@@ -49,24 +60,61 @@ fun SystemReliabilityTab(
             }
         )
 
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        Surface(
+            shape = RoundedCornerShape(AppDnaTokens.RadiusCard),
+            color = AppDnaTokens.SurfaceCard,
+            border = BorderStroke(0.5.dp, AppDnaTokens.BorderCard),
+            shadowElevation = AppDnaTokens.ElevationLevel1,
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Auto-Start Khusus HP (${Build.MANUFACTURER.uppercase()})", style = MaterialTheme.typography.titleSmall)
-                    Text("Izinkan app berjalan otomatis saat HP dinyalakan", style = MaterialTheme.typography.bodySmall)
+                Surface(
+                    shape = RoundedCornerShape(AppDnaTokens.RadiusMicro),
+                    color = AppDnaTokens.SurfaceMuted,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = null,
+                            tint = AppDnaTokens.PrimaryHero,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
-                TextButton(onClick = {
-                    BatteryOptimizationHelper.openOemAutoStartSettings(context)
-                }) {
-                    Text("Buka")
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Auto-Start Khusus HP (${Build.MANUFACTURER.uppercase()})",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = AppDnaTokens.Foreground
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "Izinkan app berjalan otomatis saat HP dinyalakan",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = AppDnaTokens.ForegroundMuted
+                        )
+                    )
+                }
+
+                TextButton(
+                    onClick = {
+                        BatteryOptimizationHelper.openOemAutoStartSettings(context)
+                    }
+                ) {
+                    Text(
+                        "Buka",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = AppDnaTokens.PrimaryHero
+                    )
                 }
             }
         }
