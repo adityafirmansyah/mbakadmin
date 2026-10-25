@@ -84,7 +84,7 @@ fun ProductDialog(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.2.sp
                             ),
-                            color = AppDnaTokens.AccentCyan
+                            color = AppDnaTokens.AccentGreen
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(

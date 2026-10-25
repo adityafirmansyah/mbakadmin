@@ -26,7 +26,9 @@ object AppDnaTokens {
     val BorderSubtle = Color(0x14000000) // ~8% black hairline
     val BorderCard = Color(0xFFE5E7EB)
 
-    val AccentCyan = Color(0xFF06B6D4)
+    val AccentGreen = Color(0xFF10B981) // WhatsApp-aligned modern emerald
+    val AccentGreenVibrant = Color(0xFF22C55E) // WhatsApp-adjacent vibrant spring green
+    val AccentCyan = AccentGreen // Alias for backward compatibility
     val SuccessGreen = Color(0xFF10B981)
     val WarningAmber = Color(0xFFF59E0B)
     val RoseAlert = Color(0xFFF43F5E)

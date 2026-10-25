@@ -62,7 +62,7 @@ fun HeroSaturatedCard(
                             .size(7.dp)
                             .background(
                                 color = if (!isListenerEnabled) AppDnaTokens.RoseAlert
-                                else if (isAutoReplyActive) AppDnaTokens.AccentCyan
+                                else if (isAutoReplyActive) AppDnaTokens.AccentGreenVibrant
                                 else AppDnaTokens.ForegroundMuted,
                                 shape = CircleShape
                             )
@@ -75,7 +75,7 @@ fun HeroSaturatedCard(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         ),
-                        color = if (!isListenerEnabled) AppDnaTokens.RoseAlert else AppDnaTokens.AccentCyan,
+                        color = if (!isListenerEnabled) AppDnaTokens.RoseAlert else AppDnaTokens.AccentGreenVibrant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
