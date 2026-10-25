@@ -1,6 +1,8 @@
 package com.mbakadmin.dagango.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -11,14 +13,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 
 /**
- * Mandatory Pattern: `hero-saturated`
- * One saturated stage per screen. 32dp corner radius, 20dp internal padding,
- * deep charcoal background with high-contrast content.
+ * Compact Header: `hero-saturated`
+ * Ultra high-density dark charcoal header anchor (#181A1F).
+ * Preserves all critical data & controls (Store Name, Live Status, Active Count, Switch)
+ * while reducing vertical space consumption from ~190dp to ~56dp.
  */
 @Composable
 fun HeroSaturatedCard(
@@ -31,87 +35,120 @@ fun HeroSaturatedCard(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(AppDnaTokens.RadiusHero),
+        shape = RoundedCornerShape(AppDnaTokens.RadiusCard),
         color = AppDnaTokens.PrimaryHero,
         shadowElevation = AppDnaTokens.ElevationLevel2,
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Eyebrow Micro-Label
+            // --- LEFT COLUMN: LIVE INDICATOR + STORE & STATUS TITLE ---
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Micro Eyebrow with Status Dot
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .background(
+                                color = if (!isListenerEnabled) AppDnaTokens.RoseAlert
+                                else if (isAutoReplyActive) AppDnaTokens.AccentCyan
+                                else AppDnaTokens.ForegroundMuted,
+                                shape = CircleShape
+                            )
+                    )
+                    Text(
+                        text = if (!isListenerEnabled) "PERLU IZIN NOTIFIKASI"
+                        else "${storeName.uppercase().ifBlank { "MBAKADMIN" }} • ${if (isAutoReplyActive) "WA LIVE" else "DIJEDA"}",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = if (!isListenerEnabled) AppDnaTokens.RoseAlert else AppDnaTokens.AccentCyan,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Main Status Headline
+                Text(
+                    text = if (!isListenerEnabled) "Izin Notifikasi Belum Aktif"
+                    else if (isAutoReplyActive) "Auto-Reply Aktif 🤖"
+                    else "Auto-Reply Dijeda ⏸️",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppDnaTokens.OnPrimaryHero
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // --- RIGHT CONTROLS: STAT PILLS & HIGH-CONTRAST SWITCH ---
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "${storeName.uppercase().ifBlank { "MbakAdmin Toko" }} • WHATSAPP LIVE",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = AppDnaTokens.TextMicro,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
-                    ),
-                    color = AppDnaTokens.AccentCyan
-                )
-
-                if (!isListenerEnabled) {
+                // Pending Verification Badge (High priority alert)
+                if (pendingVerificationsCount > 0) {
                     Surface(
                         shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
                         color = AppDnaTokens.RoseAlert.copy(alpha = 0.25f)
                     ) {
                         Text(
-                            text = "PERLU IZIN",
+                            text = "$pendingVerificationsCount Cek",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold
                             ),
                             color = AppDnaTokens.RoseAlert,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                } else {
+                    // Active Product Count Pill
+                    Surface(
+                        shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
+                        color = AppDnaTokens.OnPrimaryHero.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = "$activeProductsCount Produk",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = AppDnaTokens.OnPrimaryHero,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Main Status Title & High-Contrast Switch
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = if (!isListenerEnabled) "Perlu Izin Notifikasi"
-                        else if (isAutoReplyActive) "MbakAdmin Aktif 🤖"
-                        else "Auto-Reply Dijeda ⏸️",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = AppDnaTokens.OnPrimaryHero
-                        )
-                    )
-                    Text(
-                        text = if (!isListenerEnabled) "Aktifkan izin notifikasi di tab Sistem"
-                        else if (isAutoReplyActive) "Memantau & membalas chat pembeli"
-                        else "Aktifkan agar bot membalas otomatis",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = AppDnaTokens.ForegroundSubtle
-                        )
-                    )
-                }
-
+                // Switch Toggle
                 Switch(
                     checked = isAutoReplyActive,
                     onCheckedChange = onToggleAutoReply,
-                    modifier = Modifier.scale(0.85f),
+                    modifier = Modifier.scale(0.8f),
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = AppDnaTokens.PrimaryHero,
                         checkedTrackColor = AppDnaTokens.OnPrimaryHero,
                         uncheckedThumbColor = AppDnaTokens.ForegroundMuted,
-                        uncheckedTrackColor = AppDnaTokens.SurfaceMuted.copy(alpha = 0.2f)
+                        uncheckedTrackColor = AppDnaTokens.SurfaceMuted.copy(alpha = 0.25f)
                     ),
                     thumbContent = {
                         Icon(
@@ -121,69 +158,6 @@ fun HeroSaturatedCard(
                         )
                     }
                 )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Stat pills inside Hero stage
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Product count pill
-                Surface(
-                    shape = RoundedCornerShape(AppDnaTokens.RadiusMicro),
-                    color = AppDnaTokens.OnPrimaryHero.copy(alpha = 0.1f),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = "$activeProductsCount",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = AppDnaTokens.OnPrimaryHero
-                            )
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Produk Aktif",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = AppDnaTokens.ForegroundSubtle
-                            )
-                        )
-                    }
-                }
-
-                // Pending Verification count pill
-                Surface(
-                    shape = RoundedCornerShape(AppDnaTokens.RadiusMicro),
-                    color = if (pendingVerificationsCount > 0) AppDnaTokens.RoseAlert.copy(alpha = 0.25f)
-                    else AppDnaTokens.OnPrimaryHero.copy(alpha = 0.1f),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = "$pendingVerificationsCount",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = if (pendingVerificationsCount > 0) AppDnaTokens.RoseAlert else AppDnaTokens.OnPrimaryHero
-                            )
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (pendingVerificationsCount > 0) "Perlu Cek" else "Verifikasi",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = if (pendingVerificationsCount > 0) AppDnaTokens.RoseAlert else AppDnaTokens.ForegroundSubtle
-                            )
-                        )
-                    }
-                }
             }
         }
     }

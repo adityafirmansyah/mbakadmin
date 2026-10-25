@@ -154,7 +154,7 @@ fun MainScreen() {
                 pendingVerificationsCount = pendingCount
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Screen Content Routing
             Box(modifier = Modifier.weight(1f)) {
