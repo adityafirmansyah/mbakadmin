@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" preserveAspectRatio="xMidYMid meet">
+  <rect width="512" height="512" rx="115" fill="#6D28D9"/>
+  <circle cx="256" cy="265" r="185" fill="#5B21B6"/>
+
+  <!-- Mecha Wing Antennas on Headset (White & Cyan Sci-Fi Fins) -->
+  <polygon points="120,110 70,45 145,80" fill="#FFFFFF"/>
+  <polygon points="115,100 85,58 135,82" fill="#22D3EE"/>
+  <polygon points="392,110 442,45 367,80" fill="#FFFFFF"/>
+  <polygon points="397,100 427,58 377,82" fill="#22D3EE"/>
+
+  <!-- Back Inner Hair Glow: Cyan -->
+  <path d="M 135 220 C 115 340, 135 430, 185 465 L 256 480 L 327 465 C 377 430, 397 340, 377 220 Z" fill="#22D3EE"/>
+  <path d="M 145 230 C 130 340, 145 420, 190 450 L 256 465 L 322 450 C 367 420, 382 340, 367 230 Z" fill="#0F172A"/>
+
+  <!-- High-Tech Shoulders -->
+  <path d="M 140 512 L 180 435 L 256 455 L 332 435 L 372 512 Z" fill="#0F172A"/>
+  <path d="M 140 512 L 180 435 L 210 442 L 175 512 Z" fill="#FFFFFF"/>
+  <path d="M 372 512 L 332 435 L 302 442 L 337 512 Z" fill="#FFFFFF"/>
+  <!-- Glowing Horizontal Chest Strip -->
+  <rect x="220" y="445" width="72" height="8" rx="4" fill="#22D3EE"/>
+
+  <!-- Neck -->
+  <path d="M 232 350 L 232 440 C 248 446, 264 446, 280 440 L 280 350 Z" fill="#FFF7ED"/>
+  <!-- Choker Seam -->
+  <line x1="242" y1="395" x2="270" y2="395" stroke="#22D3EE" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Face Shape -->
+  <path d="M 172 215 C 172 135, 340 135, 340 215 C 340 305, 296 375, 256 385 C 216 375, 172 305, 172 215 Z" fill="#FFF7ED"/>
+
+  <!-- Cheeks: Pink Blush with Cyber Seam Dots -->
+  <ellipse cx="204" cy="298" rx="14" ry="8" fill="#FB7185"/>
+  <ellipse cx="308" cy="298" rx="14" ry="8" fill="#FB7185"/>
+  <circle cx="188" cy="285" r="3" fill="#22D3EE"/>
+  <circle cx="324" cy="285" r="3" fill="#22D3EE"/>
+
+  <!-- Sweet Little Smile -->
+  <path d="M 246 326 Q 256 335 266 326" fill="none" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- EYES: Bright Turquoise Eyes -->
+  <g>
+    <path d="M 190 248 C 200 230, 226 230, 238 246" fill="none" stroke="#F43F5E" stroke-width="10" stroke-linecap="round"/>
+    <path d="M 190 246 C 200 228, 226 228, 238 244" fill="none" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+    <ellipse cx="214" cy="256" rx="18" ry="24" fill="#06B6D4"/>
+    <ellipse cx="214" cy="260" rx="15" ry="18" fill="#22D3EE"/>
+    <ellipse cx="214" cy="252" rx="9" ry="12" fill="#0F172A"/>
+    <circle cx="207" cy="244" r="6.5" fill="#FFFFFF"/>
+    <circle cx="222" cy="264" r="3.5" fill="#FFFFFF"/>
+  </g>
+  <g>
+    <path d="M 274 246 C 286 230, 312 230, 322 248" fill="none" stroke="#F43F5E" stroke-width="10" stroke-linecap="round"/>
+    <path d="M 274 244 C 286 228, 312 228, 322 246" fill="none" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+    <ellipse cx="298" cy="256" rx="18" ry="24" fill="#06B6D4"/>
+    <ellipse cx="298" cy="260" rx="15" ry="18" fill="#22D3EE"/>
+    <ellipse cx="298" cy="252" rx="9" ry="12" fill="#0F172A"/>
+    <circle cx="291" cy="244" r="6.5" fill="#FFFFFF"/>
+    <circle cx="306" cy="264" r="3.5" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Eyebrows -->
+  <path d="M 196 218 Q 212 210 228 216" fill="none" stroke="#64748B" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M 284 216 Q 300 210 316 218" fill="none" stroke="#64748B" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- WHITE / PLATINUM FRONT HAIR -->
+  <path d="M 166 190 C 160 250, 168 310, 185 345 C 195 320, 192 260, 188 200 Z" fill="#FFFFFF"/>
+  <path d="M 346 190 C 352 250, 344 310, 327 345 C 317 320, 320 260, 324 200 Z" fill="#FFFFFF"/>
+  <path d="M 166 190 C 175 110, 337 110, 346 190 L 332 205 L 315 200 L 295 224 L 285 200 L 260 228 L 248 200 L 225 226 L 210 200 L 190 206 Z" fill="#FFFFFF"/>
+
+  <!-- Earpieces & Mic -->
+  <g transform="translate(136, 235)">
+    <circle cx="0" cy="0" r="30" fill="#FFFFFF" stroke="#0F172A" stroke-width="4"/>
+    <circle cx="0" cy="0" r="16" fill="#22D3EE"/>
+    <circle cx="0" cy="0" r="7" fill="#0F172A"/>
+  </g>
+  <g transform="translate(376, 235)">
+    <circle cx="0" cy="0" r="30" fill="#FFFFFF" stroke="#0F172A" stroke-width="4"/>
+    <circle cx="0" cy="0" r="16" fill="#22D3EE"/>
+    <circle cx="0" cy="0" r="7" fill="#0F172A"/>
+    <!-- Mic -->
+    <path d="M -6 16 Q -30 60 -80 70 L -100 72" fill="none" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+    <path d="M -6 16 Q -30 60 -80 70 L -100 72" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+    <rect x="-118" y="63" width="20" height="18" rx="6" fill="#22D3EE" stroke="#0F172A" stroke-width="3"/>
+  </g>
+</svg>

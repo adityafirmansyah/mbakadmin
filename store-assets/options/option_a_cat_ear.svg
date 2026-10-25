@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" preserveAspectRatio="xMidYMid meet">
+  <rect width="512" height="512" preserveAspectRatio="xMidYMid meet" rx="115" fill="#7C3AED"/>
+  <circle cx="256" cy="270" r="185" fill="#6D28D9"/>
+  <!-- Mecha Cat Ears (Big, Bold, Iconic) -->
+  <polygon points="120,80 185,160 110,180" fill="#0F172A"/>
+  <polygon points="130,95 175,155 125,168" fill="#06B6D4"/>
+  <polygon points="392,80 327,160 402,180" fill="#0F172A"/>
+  <polygon points="382,95 337,155 387,168" fill="#06B6D4"/>
+  <!-- Twin Tails (Side bunches) -->
+  <path d="M110 220 C 70 320, 90 420, 130 460 L 150 410 C 130 360, 120 300, 135 220 Z" fill="#4C1D95"/>
+  <path d="M402 220 C 442 320, 422 420, 382 460 L 362 410 C 382 360, 392 300, 377 220 Z" fill="#4C1D95"/>
+  <!-- Mecha Shoulders -->
+  <path d="M140 512 L175 430 L256 450 L337 430 L372 512 Z" fill="#0F172A"/>
+  <polygon points="220,440 256,450 292,440 276,475 256,482 236,475" fill="#06B6D4"/>
+  <!-- Neck -->
+  <path d="M236 350 L236 440 C 248 444, 264 444, 276 440 L276 350 Z" fill="#FFFFFF"/>
+  <line x1="244" y1="395" x2="268" y2="395" stroke="#06B6D4" stroke-width="5" stroke-linecap="round"/>
+  <!-- Face Shape -->
+  <path d="M175 210 C 175 130, 337 130, 337 210 C 337 300, 290 370, 256 380 C 222 370, 175 300, 175 210 Z" fill="#FFFFFF"/>
+  <!-- Cheeks Blush -->
+  <circle cx="206" cy="295" r="11" fill="#F43F5E"/>
+  <circle cx="306" cy="295" r="11" fill="#F43F5E"/>
+  <!-- Cyber Cheek Lines -->
+  <circle cx="188" cy="270" r="3.5" fill="#06B6D4"/>
+  <line x1="188" y1="270" x2="198" y2="270" stroke="#06B6D4" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="324" cy="270" r="3.5" fill="#06B6D4"/>
+  <line x1="314" y1="270" x2="324" y2="270" stroke="#06B6D4" stroke-width="3" stroke-linecap="round"/>
+  <!-- Mouth Smile -->
+  <path d="M244 322 Q256 335 268 322" fill="none" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+  <!-- Left Eye: Big observant anime eye -->
+  <path d="M194 246 C 204 232, 224 232, 234 246" fill="none" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="214" cy="260" rx="14" ry="20" fill="#06B6D4"/>
+  <ellipse cx="214" cy="260" rx="7" ry="11" fill="#0F172A"/>
+  <circle cx="210" cy="253" r="5" fill="#FFFFFF"/>
+  <circle cx="218" cy="268" r="2.5" fill="#FFFFFF"/>
+  <!-- Right Eye: Playful Wink (Cute Customer Service Wink) -->
+  <path d="M280 262 Q 298 246 316 262" fill="none" stroke="#0F172A" stroke-width="7.5" stroke-linecap="round"/>
+  <line x1="312" y1="262" x2="320" y2="256" stroke="#0F172A" stroke-width="6" stroke-linecap="round"/>
+  <!-- Eyebrows -->
+  <path d="M198 222 Q214 212 230 220" fill="none" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+  <path d="M282 224 Q298 214 314 226" fill="none" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+  <!-- Bangs -->
+  <path d="M172 195 C 180 120, 332 120, 340 195 C 344 240, 332 258, 324 225 C 312 255, 294 270, 284 242 C 276 270, 258 280, 252 252 C 242 276, 222 272, 214 242 C 204 270, 186 258, 180 225 C 174 258, 170 235, 172 195 Z" fill="#0F172A"/>
+  <!-- Center Heart Cowlick / Antenna -->
+  <path d="M256 130 C 265 70, 294 75, 294 86 C 294 100, 268 110, 258 130 Z" fill="#06B6D4"/>
+  <!-- Headset Mic -->
+  <g transform="translate(380, 230)">
+    <circle cx="0" cy="0" r="28" fill="#0F172A"/>
+    <circle cx="0" cy="0" r="18" fill="#FFFFFF"/>
+    <circle cx="0" cy="0" r="10" fill="#06B6D4"/>
+    <path d="M -6 16 Q -30 65 -85 75 L -105 77" fill="none" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+    <rect x="-122" y="68" width="20" height="18" rx="6" fill="#06B6D4" stroke="#0F172A" stroke-width="3"/>
+    <circle cx="-112" cy="77" r="3" fill="#FFFFFF"/>
+  </g>
+</svg>

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" preserveAspectRatio="xMidYMid meet">
+  <rect width="512" height="512" rx="115" fill="#6D28D9"/>
+  <circle cx="256" cy="265" r="185" fill="#5B21B6"/>
+
+  <!-- Cute Cat-Ear Sensors (Clean White & Cyan) -->
+  <polygon points="140,80 195,160 125,175" fill="#FFFFFF" stroke="#0F172A" stroke-width="4"/>
+  <polygon points="148,95 185,155 138,165" fill="#22D3EE"/>
+  <polygon points="372,80 317,160 387,175" fill="#FFFFFF" stroke="#0F172A" stroke-width="4"/>
+  <polygon points="364,95 327,155 374,165" fill="#22D3EE"/>
+
+  <!-- Cyan Under-hair glow -->
+  <path d="M 130 220 C 110 340, 130 430, 180 465 L 256 480 L 332 465 C 382 430, 402 340, 382 220 Z" fill="#22D3EE"/>
+  <path d="M 140 230 C 125 340, 140 420, 185 450 L 256 465 L 327 450 C 372 420, 387 340, 372 230 Z" fill="#0F172A"/>
+
+  <!-- Shoulders -->
+  <path d="M 140 512 L 180 435 L 256 455 L 332 435 L 372 512 Z" fill="#0F172A"/>
+  <polygon points="215,442 256,455 297,442 280,480 256,488 232,480" fill="#22D3EE"/>
+
+  <!-- Neck -->
+  <path d="M 232 350 L 232 440 C 248 446, 264 446, 280 440 L 280 350 Z" fill="#FFF7ED"/>
+
+  <!-- Face Shape -->
+  <path d="M 172 215 C 172 135, 340 135, 340 215 C 340 305, 296 375, 256 385 C 216 375, 172 305, 172 215 Z" fill="#FFF7ED"/>
+
+  <!-- Cheeks -->
+  <circle cx="204" cy="298" r="12" fill="#FB7185"/>
+  <circle cx="308" cy="298" r="12" fill="#FB7185"/>
+
+  <!-- Cute Wink Expression (Playful like CS) -->
+  <path d="M 244 324 Q 256 336 268 324" fill="none" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- Left Eye: Open & Radiant Cyan -->
+  <g>
+    <path d="M 190 248 C 200 230, 226 230, 238 246" fill="none" stroke="#F43F5E" stroke-width="10" stroke-linecap="round"/>
+    <path d="M 190 246 C 200 228, 226 228, 238 244" fill="none" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+    <ellipse cx="214" cy="256" rx="18" ry="24" fill="#06B6D4"/>
+    <ellipse cx="214" cy="260" rx="15" ry="18" fill="#22D3EE"/>
+    <ellipse cx="214" cy="252" rx="9" ry="12" fill="#0F172A"/>
+    <circle cx="207" cy="244" r="6.5" fill="#FFFFFF"/>
+    <circle cx="222" cy="264" r="3.5" fill="#FFFFFF"/>
+  </g>
+  <!-- Right Eye: Friendly Wink -->
+  <g>
+    <path d="M 280 260 Q 298 244 316 260" fill="none" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+    <line x1="312" y1="260" x2="322" y2="252" stroke="#0F172A" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Eyebrows -->
+  <path d="M 196 218 Q 212 210 228 216" fill="none" stroke="#64748B" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M 284 218 Q 300 210 316 220" fill="none" stroke="#64748B" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- White Hair -->
+  <path d="M 166 190 C 160 250, 168 310, 185 345 C 195 320, 192 260, 188 200 Z" fill="#FFFFFF"/>
+  <path d="M 346 190 C 352 250, 344 310, 327 345 C 317 320, 320 260, 324 200 Z" fill="#FFFFFF"/>
+  <path d="M 166 190 C 175 110, 337 110, 346 190 L 332 205 L 315 200 L 295 224 L 285 200 L 260 228 L 248 200 L 225 226 L 210 200 L 190 206 Z" fill="#FFFFFF"/>
+
+  <!-- Headset -->
+  <g transform="translate(376, 235)">
+    <circle cx="0" cy="0" r="28" fill="#FFFFFF" stroke="#0F172A" stroke-width="4"/>
+    <circle cx="0" cy="0" r="14" fill="#22D3EE"/>
+    <path d="M -6 16 Q -30 60 -80 70 L -100 72" fill="none" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+    <rect x="-118" y="63" width="20" height="18" rx="6" fill="#22D3EE" stroke="#0F172A" stroke-width="3"/>
+  </g>
+</svg>
