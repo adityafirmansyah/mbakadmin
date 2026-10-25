@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.mbakadmin.dagango.data.local.entity.ProductEntity
 import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 
@@ -185,27 +187,12 @@ fun CompactProductListItem(
                     )
                 }
 
-                DropdownMenu(
+                ProductActionDropdownMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Edit Produk", color = AppDnaTokens.Foreground) },
-                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        onClick = {
-                            showMenu = false
-                            onEdit(product)
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Hapus Produk", color = AppDnaTokens.RoseAlert) },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = AppDnaTokens.RoseAlert, modifier = Modifier.size(18.dp)) },
-                        onClick = {
-                            showMenu = false
-                            onDelete(product)
-                        }
-                    )
-                }
+                    onDismissRequest = { showMenu = false },
+                    onEdit = { onEdit(product) },
+                    onDelete = { onDelete(product) }
+                )
             }
         }
     }
@@ -321,57 +308,101 @@ fun CompactProductGridCard(
                     ) {
                         Icon(Icons.Default.MoreVert, contentDescription = null, modifier = Modifier.size(16.dp))
                     }
-                    DropdownMenu(
+                    ProductActionDropdownMenu(
                         expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Edit") },
-                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                            onClick = {
-                                showMenu = false
-                                onEdit(product)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Hapus", color = AppDnaTokens.RoseAlert) },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = AppDnaTokens.RoseAlert, modifier = Modifier.size(16.dp)) },
-                            onClick = {
-                                showMenu = false
-                                onDelete(product)
-                            }
-                        )
-                    }
+                        onDismissRequest = { showMenu = false },
+                        onEdit = { onEdit(product) },
+                        onDelete = { onDelete(product) }
+                    )
                 }
             }
         }
     }
 }
 
+/**
+ * Dropdown Menu styled with Productivity Focus App DNA:
+ * - 12dp micro rounded corners with 0.5dp hairline border
+ * - Pure white SurfaceCard with elevation level 2
+ * - Crisp icons with theme colors and hairline dividers
+ */
 @Composable
-fun DeleteProductConfirmDialog(
-    product: ProductEntity,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+fun ProductActionDropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Hapus Produk?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
-        text = {
-            Text("Produk \"${product.name}\" akan dihapus permanen dari katalog toko.")
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = AppDnaTokens.RoseAlert)
-            ) {
-                Text("Hapus", color = AppDnaTokens.OnPrimaryHero, fontWeight = FontWeight.Bold)
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        shape = RoundedCornerShape(AppDnaTokens.RadiusMicro),
+        containerColor = AppDnaTokens.SurfaceCard,
+        tonalElevation = 0.dp,
+        shadowElevation = AppDnaTokens.ElevationLevel2,
+        border = BorderStroke(0.5.dp, AppDnaTokens.BorderCard),
+        modifier = Modifier.widthIn(min = 160.dp)
+    ) {
+        DropdownMenuItem(
+            text = {
+                Text(
+                    text = "Edit Produk",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = AppDnaTokens.TextBody
+                    ),
+                    color = AppDnaTokens.Foreground
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    tint = AppDnaTokens.PrimaryHero,
+                    modifier = Modifier.size(18.dp)
+                )
+            },
+            colors = MenuDefaults.itemColors(
+                textColor = AppDnaTokens.Foreground,
+                leadingIconColor = AppDnaTokens.PrimaryHero
+            ),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+            onClick = {
+                onDismissRequest()
+                onEdit()
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Batal", color = AppDnaTokens.ForegroundMuted)
+        )
+
+        HorizontalDivider(thickness = 0.5.dp, color = AppDnaTokens.BorderCard)
+
+        DropdownMenuItem(
+            text = {
+                Text(
+                    text = "Hapus Produk",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = AppDnaTokens.TextBody
+                    ),
+                    color = AppDnaTokens.RoseAlert
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = AppDnaTokens.RoseAlert,
+                    modifier = Modifier.size(18.dp)
+                )
+            },
+            colors = MenuDefaults.itemColors(
+                textColor = AppDnaTokens.RoseAlert,
+                leadingIconColor = AppDnaTokens.RoseAlert
+            ),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+            onClick = {
+                onDismissRequest()
+                onDelete()
             }
-        }
-    )
+        )
+    }
 }

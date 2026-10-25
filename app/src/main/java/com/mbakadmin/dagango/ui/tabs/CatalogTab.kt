@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.mbakadmin.dagango.data.local.entity.ProductEntity
 import com.mbakadmin.dagango.ui.components.CompactProductGridCard
 import com.mbakadmin.dagango.ui.components.CompactProductListItem
-import com.mbakadmin.dagango.ui.components.DeleteProductConfirmDialog
+import com.mbakadmin.dagango.ui.dialogs.DeleteProductConfirmDialog
 import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 
 enum class CatalogFilter {
