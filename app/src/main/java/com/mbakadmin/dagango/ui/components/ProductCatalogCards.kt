@@ -118,9 +118,9 @@ fun CompactProductListItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Oversized numeral style price
+                    // Oversized numeral style price with Indonesian thousand separator
                     Text(
-                        text = "Rp ${product.price.toInt()}",
+                        text = "Rp %,d".format(java.util.Locale("id", "ID"), product.price.toLong()),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = AppDnaTokens.Foreground
@@ -143,18 +143,18 @@ fun CompactProductListItem(
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
+                }
 
-                    if (product.variants.isNotBlank()) {
-                        Text("•", style = MaterialTheme.typography.bodySmall, color = AppDnaTokens.ForegroundSubtle)
-                        Text(
-                            text = product.variants,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = AppDnaTokens.ForegroundMuted
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                if (product.variants.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Varian: ${product.variants}",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = AppDnaTokens.ForegroundMuted
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
@@ -294,7 +294,7 @@ fun CompactProductGridCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Rp ${product.price.toInt()}",
+                    text = "Rp %,d".format(java.util.Locale("id", "ID"), product.price.toLong()),
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
                         color = AppDnaTokens.Foreground

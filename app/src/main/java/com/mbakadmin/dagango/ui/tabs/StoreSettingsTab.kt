@@ -47,7 +47,7 @@ fun StoreSettingsTab(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 72.dp),
+                .padding(bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(AppDnaTokens.GapFeed)
         ) {
             // --- SECTION 1: PROFIL TOKO & ADMIN ---
@@ -280,13 +280,15 @@ fun StoreSettingsTab(
             }
         }
 
-        // --- TOMBOL SIMPAN PENGATURAN ---
+        // --- TOMBOL SIMPAN PENGATURAN (STICKY DENGAN BACKING PERMUKAAN BERSIH) ---
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            color = Color.Transparent
+                .padding(bottom = 6.dp),
+            shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
+            color = AppDnaTokens.SurfaceCanvas.copy(alpha = 0.95f),
+            shadowElevation = AppDnaTokens.ElevationLevel2
         ) {
             Button(
                 onClick = {

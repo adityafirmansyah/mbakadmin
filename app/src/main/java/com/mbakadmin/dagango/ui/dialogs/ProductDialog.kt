@@ -150,6 +150,15 @@ fun ProductDialog(
                             onValueChange = { str -> price = str.filter { it.isDigit() } },
                             label = { Text("Harga (Rp) *") },
                             placeholder = { Text("50000") },
+                            supportingText = if (parsedPrice > 0) {
+                                {
+                                    Text(
+                                        text = "Rp %,d".format(java.util.Locale("id", "ID"), parsedPrice.toLong()),
+                                        fontSize = 11.sp,
+                                        color = AppDnaTokens.AccentGreen
+                                    )
+                                }
+                            } else null,
                             singleLine = true,
                             shape = RoundedCornerShape(AppDnaTokens.RadiusMicro),
                             keyboardOptions = KeyboardOptions(
@@ -210,10 +219,11 @@ fun ProductDialog(
                         onValueChange = { description = it },
                         label = { Text("Deskripsi Singkat (Opsional)") },
                         placeholder = { Text("Keterangan bahan, spesifikasi, atau catatan...") },
-                        minLines = 2,
+                        minLines = 3,
+                        singleLine = false,
                         shape = RoundedCornerShape(AppDnaTokens.RadiusMicro),
                         keyboardOptions = KeyboardOptions(
-                            imeAction = ImeAction.Done
+                            imeAction = ImeAction.Default
                         ),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = AppDnaTokens.PrimaryHero,
