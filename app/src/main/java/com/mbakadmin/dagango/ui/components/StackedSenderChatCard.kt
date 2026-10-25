@@ -4,6 +4,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,19 +14,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mbakadmin.dagango.data.local.entity.ChatLogEntity
+import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 import java.text.SimpleDateFormat
 import java.util.*
 
 data class ChatSenderGroup(
     val senderName: String,
-    val messages: List<ChatLogEntity>, // Diurutkan dari yang terbaru (index 0) ke yang terlama
+    val messages: List<ChatLogEntity>,
     val latestMessage: ChatLogEntity,
     val hasPendingVerification: Boolean,
     val pendingVerificationLog: ChatLogEntity?,
     val customerPhone: String
 )
 
+/**
+ * StackedSenderChatCard styled with Productivity Focus App DNA.
+ * Patterns: `grouped-feed`, `tinted-card-white-floating` (24dp radius, hairline border).
+ */
 @Composable
 fun StackedSenderChatCard(
     group: ChatSenderGroup,
@@ -43,19 +50,18 @@ fun StackedSenderChatCard(
     Column(modifier = Modifier.fillMaxWidth()) {
         if (!isExpanded) {
             // === STATE COLLAPSED: WALLET-STYLE STACKED CARDS ===
-            // Kartu teratas adalah pesan paling baru, di bawahnya mengintip kartu-kartu sebelumnya
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onToggleExpand() }
                     .padding(bottom = if (totalCount > 2) 20.dp else if (totalCount == 2) 12.dp else 4.dp)
             ) {
-                // Layer 3 (paling bawah/belakang, mengintip di paling bawah tumpukan)
+                // Layer 3 (paling bawah/belakang)
                 if (totalCount >= 3) {
                     Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(AppDnaTokens.RadiusCard),
+                        color = AppDnaTokens.SurfaceMuted.copy(alpha = 0.5f),
+                        border = BorderStroke(0.5.dp, AppDnaTokens.BorderCard),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
@@ -64,13 +70,13 @@ fun StackedSenderChatCard(
                     ) {}
                 }
 
-                // Layer 2 (tengah, mengintip di antara layer 1 & 3)
+                // Layer 2 (tengah)
                 if (totalCount >= 2) {
                     Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = if (group.hasPendingVerification) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(AppDnaTokens.RadiusCard),
+                        color = if (group.hasPendingVerification) AppDnaTokens.RoseAlert.copy(alpha = 0.15f)
+                        else AppDnaTokens.SurfaceMuted.copy(alpha = 0.85f),
+                        border = BorderStroke(0.5.dp, AppDnaTokens.BorderCard),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
@@ -80,78 +86,125 @@ fun StackedSenderChatCard(
                 }
 
                 // Layer 1: Front Card (Pesan Terbaru)
-                Card(
-                    shape = MaterialTheme.shapes.large,
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (group.hasPendingVerification) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f)
-                        else MaterialTheme.colorScheme.surface
-                    ),
-                    border = if (group.hasPendingVerification) BorderStroke(1.5.dp, MaterialTheme.colorScheme.error)
-                    else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                Surface(
+                    shape = RoundedCornerShape(AppDnaTokens.RadiusCard),
+                    color = AppDnaTokens.SurfaceCard,
+                    border = if (group.hasPendingVerification) BorderStroke(1.5.dp, AppDnaTokens.RoseAlert)
+                    else BorderStroke(0.5.dp, AppDnaTokens.BorderCard),
+                    shadowElevation = AppDnaTokens.ElevationLevel1,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text("👤 ${group.senderName}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "👤 ${group.senderName}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppDnaTokens.Foreground
+                                        )
+                                    )
                                     if (totalCount > 1) {
-                                        Surface(shape = MaterialTheme.shapes.extraSmall, color = MaterialTheme.colorScheme.secondaryContainer) {
-                                            Text("$totalCount pesan", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
+                                            color = AppDnaTokens.SurfaceMuted
+                                        ) {
+                                            Text(
+                                                "$totalCount pesan",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontSize = AppDnaTokens.TextMicro,
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                color = AppDnaTokens.ForegroundMuted,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
                                         }
                                     }
                                 }
                                 if (group.customerPhone.isNotBlank()) {
-                                    Text("📱 ${group.customerPhone}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                    Text(
+                                        "📱 ${group.customerPhone}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = AppDnaTokens.ForegroundMuted
+                                        )
+                                    )
                                 }
                             }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(dateFormat.format(Date(group.latestMessage.timestamp)), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                Text(
+                                    dateFormat.format(Date(group.latestMessage.timestamp)),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = AppDnaTokens.TextMicro),
+                                    color = AppDnaTokens.ForegroundMuted
+                                )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.Default.Layers, contentDescription = "Stacked Chat", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Default.Layers,
+                                    contentDescription = "Stacked Chat",
+                                    tint = AppDnaTokens.PrimaryHero,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
 
                         // Banner verifikasi langsung di front card jika butuh verifikasi
                         if (group.hasPendingVerification) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.extraSmall) {
-                                    Text("⏳ Perlu Verifikasi Pembayaran", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontWeight = FontWeight.SemiBold)
+                                Surface(
+                                    color = AppDnaTokens.RoseAlert.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(AppDnaTokens.RadiusPill)
+                                ) {
+                                    Text(
+                                        "⏳ Perlu Verifikasi Pembayaran",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = AppDnaTokens.TextMicro,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = AppDnaTokens.RoseAlert,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
                                 }
                                 group.pendingVerificationLog?.let { pLog ->
-                                    Button(onClick = { onVerifyClick(pLog) }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
+                                    Button(
+                                        onClick = { onVerifyClick(pLog) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = AppDnaTokens.PrimaryHero),
+                                        shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
                                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Verifikasi", style = MaterialTheme.typography.labelSmall)
+                                        Text("Verifikasi", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                                     }
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = "💬 \"${group.latestMessage.incomingMessage}\"",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = AppDnaTokens.Foreground
+                            ),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
 
                         if (group.latestMessage.aiReply.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = "🤖 ${group.latestMessage.aiReply}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = AppDnaTokens.ForegroundMuted
+                                ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -160,78 +213,108 @@ fun StackedSenderChatCard(
                 }
             }
         } else {
-            // === STATE EXPANDED: SINGLE OPEN THREAD, URUT DARI TERBARU (TOP) KE TERLAMA (BOTTOM) ===
-            Card(
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+            // === STATE EXPANDED: SINGLE OPEN THREAD ===
+            Surface(
+                shape = RoundedCornerShape(AppDnaTokens.RadiusCard),
+                color = AppDnaTokens.SurfaceCard,
+                border = BorderStroke(1.dp, AppDnaTokens.PrimaryHero.copy(alpha = 0.5f)),
+                shadowElevation = AppDnaTokens.ElevationLevel2,
                 modifier = Modifier
                     .fillMaxWidth()
                     .animateContentSize()
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     // Top Bar Navigasi thread yang sedang dibuka
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         IconButton(onClick = onToggleExpand, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Kembali ke Stack", tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Kembali ke Stack", tint = AppDnaTokens.PrimaryHero)
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("👤 ${group.senderName}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Surface(shape = MaterialTheme.shapes.extraSmall, color = MaterialTheme.colorScheme.secondaryContainer) {
-                                    Text("$totalCount pesan", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text(
+                                    "👤 ${group.senderName}",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppDnaTokens.Foreground
+                                    )
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
+                                    color = AppDnaTokens.SurfaceMuted
+                                ) {
+                                    Text(
+                                        "$totalCount pesan",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = AppDnaTokens.TextMicro),
+                                        color = AppDnaTokens.ForegroundMuted,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
                                 }
                             }
                             if (group.customerPhone.isNotBlank()) {
-                                Text("📱 ${group.customerPhone}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                Text("📱 ${group.customerPhone}", style = MaterialTheme.typography.labelSmall, color = AppDnaTokens.ForegroundMuted)
                             }
                         }
                         TextButton(onClick = onToggleExpand, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
-                            Text("Tutup", style = MaterialTheme.typography.labelSmall)
+                            Text("Tutup", style = MaterialTheme.typography.labelSmall, color = AppDnaTokens.PrimaryHero)
                         }
                     }
 
                     if (group.hasPendingVerification) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(AppDnaTokens.RadiusMicro),
+                            color = AppDnaTokens.RoseAlert.copy(alpha = 0.15f),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
-                                Text("⏳ Pesanan menunggu verifikasi pembayaran", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "⏳ Pesanan menunggu verifikasi pembayaran",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = AppDnaTokens.TextMicro,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = AppDnaTokens.RoseAlert
+                                )
                                 group.pendingVerificationLog?.let { pLog ->
-                                    Button(onClick = { onVerifyClick(pLog) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
-                                        Text("Verifikasi Sekarang", style = MaterialTheme.typography.labelSmall)
+                                    Button(
+                                        onClick = { onVerifyClick(pLog) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = AppDnaTokens.PrimaryHero),
+                                        shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("Verifikasi Sekarang", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                                     }
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(thickness = 0.5.dp, color = AppDnaTokens.BorderCard)
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
                         text = "Riwayat Pesan (Paling Baru di Atas):",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = AppDnaTokens.TextMicro,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp
+                        ),
+                        color = AppDnaTokens.ForegroundMuted
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // List pesan: group.messages sudah diurutkan dari terbaru ke terlama
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(AppDnaTokens.GapFeed)) {
                         group.messages.forEachIndexed { idx, msg ->
                             val isLatest = idx == 0
                             SingleMessageCard(

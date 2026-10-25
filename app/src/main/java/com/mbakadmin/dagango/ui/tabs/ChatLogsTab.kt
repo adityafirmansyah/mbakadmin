@@ -9,10 +9,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mbakadmin.dagango.data.local.entity.ChatLogEntity
 import com.mbakadmin.dagango.ui.components.ChatSenderGroup
 import com.mbakadmin.dagango.ui.components.StackedSenderChatCard
+import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -27,22 +29,20 @@ fun ChatLogsTab(
     if (chatLogs.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.MarkChatRead, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline)
+                Icon(Icons.Default.MarkChatRead, contentDescription = null, modifier = Modifier.size(48.dp), tint = AppDnaTokens.ForegroundSubtle)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Belum ada riwayat chat otomatis.", style = MaterialTheme.typography.bodyMedium)
-                Text("Chat WhatsApp yang dibalas MbakAdmin akan muncul di sini.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text("Belum ada riwayat chat otomatis.", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = AppDnaTokens.Foreground)
+                Text("Chat WhatsApp yang dibalas MbakAdmin akan muncul di sini.", style = MaterialTheme.typography.bodySmall, color = AppDnaTokens.ForegroundMuted)
             }
         }
     } else {
         val dateFormat = remember { SimpleDateFormat("HH:mm - dd MMM", Locale("id", "ID")) }
         val timeFormat = remember { SimpleDateFormat("HH:mm", Locale("id", "ID")) }
 
-        // Kelompokkan chat log berdasarkan pengirim (senderName), prioritaskan yang butuh verifikasi di paling atas
         val senderGroups = remember(chatLogs) {
             chatLogs
                 .groupBy { it.senderName }
                 .map { (sender, logs) ->
-                    // Urutkan dari yang paling baru (index 0) ke paling lama (terbawah saat expand)
                     val sortedDesc = logs.sortedByDescending { it.timestamp }
                     val latest = sortedDesc.first()
                     val pendingLog = logs.firstOrNull { it.isPaymentClaimed && !it.isVerifiedByHuman }
@@ -62,7 +62,6 @@ fun ChatLogsTab(
                 )
         }
 
-        // Ketika 1 group dibuka, group lain disembunyikan (fokus ke single opened thread)
         var openedSenderName by remember { mutableStateOf<String?>(null) }
 
         val displayedGroups = remember(senderGroups, openedSenderName) {
@@ -74,10 +73,8 @@ fun ChatLogsTab(
         }
 
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(AppDnaTokens.GapFeed)
         ) {
             items(displayedGroups, key = { it.senderName }) { group ->
                 val isExpanded = openedSenderName == group.senderName
