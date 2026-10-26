@@ -22,6 +22,8 @@ import com.mbakadmin.dagango.ui.dialogs.CrashLogViewerDialog
 import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 import com.mbakadmin.dagango.util.BatteryOptimizationHelper
 import com.mbakadmin.dagango.util.CrashLogger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SystemReliabilityTab(
@@ -30,7 +32,14 @@ fun SystemReliabilityTab(
     isBatteryOptimized: Boolean
 ) {
     var showCrashLogDialog by remember { mutableStateOf(false) }
-    var hasCrashLogs by remember { mutableStateOf(CrashLogger.getAllCrashLogs(context) != null) }
+    var hasCrashLogs by remember { mutableStateOf(false) }
+
+    // Cheap stat-only probe di IO thread (bukan bulk readText di main thread)
+    LaunchedEffect(showCrashLogDialog) {
+        hasCrashLogs = withContext(Dispatchers.IO) {
+            CrashLogger.hasLogs(context)
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),

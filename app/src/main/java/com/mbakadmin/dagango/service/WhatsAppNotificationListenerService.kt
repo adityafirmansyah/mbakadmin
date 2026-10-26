@@ -44,11 +44,13 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
         super.onNotificationPosted(sbn)
         try {
             processNotificationSafely(sbn)
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
+            // Jangan masukkan isi notifikasi (PII pembeli) ke message log — cukup
+            // kelas exception + package sumber.
             com.mbakadmin.dagango.util.CrashLogger.logHandledException(
                 this,
                 TAG,
-                "Crash prevented in onNotificationPosted: ${e.message}",
+                "onNotificationPosted gagal (${e.javaClass.simpleName}) untuk pkg=${sbn?.packageName ?: "-"}",
                 e
             )
         }

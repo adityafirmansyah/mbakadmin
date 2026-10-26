@@ -28,7 +28,7 @@ class MbakAdminGuardianService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
             val notification = buildPersistentNotification()
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ServiceCompat.startForeground(
                     this,
@@ -43,9 +43,15 @@ class MbakAdminGuardianService : Service() {
             com.mbakadmin.dagango.util.CrashLogger.logHandledException(
                 this,
                 "MbakAdminGuardianService",
-                "Fatal error in onStartCommand startForeground: ${e.message}",
+                "startForeground gagal: ${e.message}",
                 e
             )
+            // Service tidak pernah ber-status foreground. Jika dibiarkan hidup,
+            // OS akan membunuh proses dengan ForegroundServiceDidNotStartInTimeException
+            // (~10 detik) lalu START_STICKY me-restart-nya -> crash-restart loop.
+            // Hentikan service dengan bersih dan tolak restart otomatis.
+            stopSelf(startId)
+            return START_NOT_STICKY
         }
 
         // START_STICKY: meminta OS untuk me-restart service jika terpaksa di-kill

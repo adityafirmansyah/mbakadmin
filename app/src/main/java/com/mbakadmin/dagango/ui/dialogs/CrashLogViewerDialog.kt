@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,11 +26,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.mbakadmin.dagango.ui.theme.AppDnaTokens
 import com.mbakadmin.dagango.util.CrashLogger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * CrashLogViewerDialog
- * Menampilkan log crash fatal atau exception yang tertangkap di aplikasi
- * dengan tombol Salin Log dan Bersihkan Log.
+ * Menampilkan log crash fatal atau exception yang tertangkap di aplikasi.
+ * Log dibaca dari disk di Dispatchers.IO (bukan main thread) dan dibatasi
+ * hanya tail terakhir file (CrashLogger.getAllCrashLogs).
  */
 @Composable
 fun CrashLogViewerDialog(
@@ -38,7 +41,15 @@ fun CrashLogViewerDialog(
     onLogsCleared: () -> Unit
 ) {
     val context = LocalContext.current
-    val crashLogs = CrashLogger.getAllCrashLogs(context) ?: "Tidak ada log crash tercatat. Sistem dalam kondisi sehat."
+    var crashLogs by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val logs = withContext(Dispatchers.IO) {
+            CrashLogger.getAllCrashLogs(context)
+                ?: "Tidak ada log crash tercatat. Sistem dalam kondisi sehat."
+        }
+        crashLogs = logs
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -99,24 +110,32 @@ fun CrashLogViewerDialog(
                     color = AppDnaTokens.PrimaryHero,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f, fill = false)
-                        .heightIn(max = 380.dp)
+                        .heightIn(min = 120.dp, max = 380.dp)
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        Text(
-                            text = crashLogs,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 11.sp,
-                                lineHeight = 16.sp
-                            ),
-                            color = AppDnaTokens.OnPrimaryHero
-                        )
+                        val content = crashLogs
+                        if (content == null) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center),
+                                color = AppDnaTokens.AccentGreen,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = content,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    lineHeight = 16.sp
+                                ),
+                                color = AppDnaTokens.OnPrimaryHero
+                            )
+                        }
                     }
                 }
 
@@ -150,11 +169,16 @@ fun CrashLogViewerDialog(
 
                     Button(
                         onClick = {
+                            val logs = crashLogs ?: return@Button
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("MbakAdmin Crash Log", crashLogs)
-                            clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "Log disalin ke clipboard!", Toast.LENGTH_SHORT).show()
+                            clipboard.setPrimaryClip(ClipData.newPlainText("MbakAdmin Crash Log", logs))
+                            Toast.makeText(
+                                context,
+                                "Log disalin ke clipboard (berisi data teknikal, bagikan hanya ke developer)",
+                                Toast.LENGTH_LONG
+                            ).show()
                         },
+                        enabled = crashLogs != null,
                         shape = RoundedCornerShape(AppDnaTokens.RadiusPill),
                         colors = ButtonDefaults.buttonColors(containerColor = AppDnaTokens.PrimaryHero),
                         modifier = Modifier
