@@ -103,20 +103,28 @@ class MbakAdminGuardianService : Service() {
         const val NOTIFICATION_ID = 1001
 
         fun startService(context: Context) {
+            val intent = Intent(context, MbakAdminGuardianService::class.java)
             try {
-                val intent = Intent(context, MbakAdminGuardianService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    // Android 12+: jangan start foreground service dari background.
+                    // Jika proses tidak memiliki window yang terlihat, OS melempar
+                    // ForegroundServiceStartNotAllowedException — lewati secara diam-diam;
+                    // service akan dicoba lagi saat MainActivity ON_RESUME.
+                    val am = context.getSystemService(android.app.ActivityManager::class.java)
+                    if (am != null && !am.isBackgroundRestricted()) {
+                        context.startForegroundService(intent)
+                    } else {
+                        android.util.Log.i("MbakAdminGuardian", "Lewati start Guardian: background restriction aktif")
+                    }
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(intent)
                 } else {
                     context.startService(intent)
                 }
             } catch (e: Exception) {
-                com.mbakadmin.dagango.util.CrashLogger.logHandledException(
-                    context,
-                    "MbakAdminGuardianService",
-                    "Gagal memulai Guardian Foreground Service: ${e.message}",
-                    e
-                )
+                // ForegroundServiceStartNotAllowedException & sejenisnya BUKAN crash —
+                // cukup catat ringkasan, jangan spam stacktrace penuh.
+                android.util.Log.w("MbakAdminGuardian", "startService ditolak OS: ${e.javaClass.simpleName}")
             }
         }
 
