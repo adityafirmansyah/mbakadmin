@@ -26,17 +26,32 @@ class MbakAdminGuardianService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = buildPersistentNotification()
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ServiceCompat.startForeground(
+        try {
+            val notification = buildPersistentNotification()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            com.mbakadmin.dagango.util.CrashLogger.logHandledException(
                 this,
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                "MbakAdminGuardianService",
+                "startForeground gagal: ${e.message}",
+                e
             )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+            // Service tidak pernah ber-status foreground. Jika dibiarkan hidup,
+            // OS akan membunuh proses dengan ForegroundServiceDidNotStartInTimeException
+            // (~10 detik) lalu START_STICKY me-restart-nya -> crash-restart loop.
+            // Hentikan service dengan bersih dan tolak restart otomatis.
+            stopSelf(startId)
+            return START_NOT_STICKY
         }
 
         // START_STICKY: meminta OS untuk me-restart service jika terpaksa di-kill
@@ -89,16 +104,42 @@ class MbakAdminGuardianService : Service() {
 
         fun startService(context: Context) {
             val intent = Intent(context, MbakAdminGuardianService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    // Android 12+: jangan start foreground service dari background.
+                    // Jika proses tidak memiliki window yang terlihat, OS melempar
+                    // ForegroundServiceStartNotAllowedException — lewati secara diam-diam;
+                    // service akan dicoba lagi saat MainActivity ON_RESUME.
+                    val am = context.getSystemService(android.app.ActivityManager::class.java)
+                    if (am != null && !am.isBackgroundRestricted()) {
+                        context.startForegroundService(intent)
+                    } else {
+                        android.util.Log.i("MbakAdminGuardian", "Lewati start Guardian: background restriction aktif")
+                    }
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Exception) {
+                // ForegroundServiceStartNotAllowedException & sejenisnya BUKAN crash —
+                // cukup catat ringkasan, jangan spam stacktrace penuh.
+                android.util.Log.w("MbakAdminGuardian", "startService ditolak OS: ${e.javaClass.simpleName}")
             }
         }
 
         fun stopService(context: Context) {
-            val intent = Intent(context, MbakAdminGuardianService::class.java)
-            context.stopService(intent)
+            try {
+                val intent = Intent(context, MbakAdminGuardianService::class.java)
+                context.stopService(intent)
+            } catch (e: Exception) {
+                com.mbakadmin.dagango.util.CrashLogger.logHandledException(
+                    context,
+                    "MbakAdminGuardianService",
+                    "Gagal menghentikan Guardian Service: ${e.message}",
+                    e
+                )
+            }
         }
     }
 }

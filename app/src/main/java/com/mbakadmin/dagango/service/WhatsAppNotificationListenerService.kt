@@ -42,6 +42,21 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
+        try {
+            processNotificationSafely(sbn)
+        } catch (e: Exception) {
+            // Jangan masukkan isi notifikasi (PII pembeli) ke message log — cukup
+            // kelas exception + package sumber.
+            com.mbakadmin.dagango.util.CrashLogger.logHandledException(
+                this,
+                TAG,
+                "onNotificationPosted gagal (${e.javaClass.simpleName}) untuk pkg=${sbn?.packageName ?: "-"}",
+                e
+            )
+        }
+    }
+
+    private fun processNotificationSafely(sbn: StatusBarNotification?) {
         if (sbn == null) return
 
         val pkg = sbn.packageName
