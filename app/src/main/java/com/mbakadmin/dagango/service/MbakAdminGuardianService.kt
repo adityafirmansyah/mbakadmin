@@ -26,17 +26,26 @@ class MbakAdminGuardianService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = buildPersistentNotification()
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ServiceCompat.startForeground(
+        try {
+            val notification = buildPersistentNotification()
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            com.mbakadmin.dagango.util.CrashLogger.logHandledException(
                 this,
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                "MbakAdminGuardianService",
+                "Fatal error in onStartCommand startForeground: ${e.message}",
+                e
             )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
         }
 
         // START_STICKY: meminta OS untuk me-restart service jika terpaksa di-kill
@@ -88,17 +97,35 @@ class MbakAdminGuardianService : Service() {
         const val NOTIFICATION_ID = 1001
 
         fun startService(context: Context) {
-            val intent = Intent(context, MbakAdminGuardianService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            try {
+                val intent = Intent(context, MbakAdminGuardianService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Exception) {
+                com.mbakadmin.dagango.util.CrashLogger.logHandledException(
+                    context,
+                    "MbakAdminGuardianService",
+                    "Gagal memulai Guardian Foreground Service: ${e.message}",
+                    e
+                )
             }
         }
 
         fun stopService(context: Context) {
-            val intent = Intent(context, MbakAdminGuardianService::class.java)
-            context.stopService(intent)
+            try {
+                val intent = Intent(context, MbakAdminGuardianService::class.java)
+                context.stopService(intent)
+            } catch (e: Exception) {
+                com.mbakadmin.dagango.util.CrashLogger.logHandledException(
+                    context,
+                    "MbakAdminGuardianService",
+                    "Gagal menghentikan Guardian Service: ${e.message}",
+                    e
+                )
+            }
         }
     }
 }

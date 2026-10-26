@@ -42,6 +42,19 @@ class WhatsAppNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
+        try {
+            processNotificationSafely(sbn)
+        } catch (e: Throwable) {
+            com.mbakadmin.dagango.util.CrashLogger.logHandledException(
+                this,
+                TAG,
+                "Crash prevented in onNotificationPosted: ${e.message}",
+                e
+            )
+        }
+    }
+
+    private fun processNotificationSafely(sbn: StatusBarNotification?) {
         if (sbn == null) return
 
         val pkg = sbn.packageName
